@@ -2,9 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { CssBaseline } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
-import App from '@/components/App';
-import { darkTheme, lightTheme } from '@/utils/theme';
-import { SettingsProvider, useSettings } from '@/components/context/SettingsContext';
+import App from './components/App';
+import { darkTheme, lightTheme } from './utils/theme';
+import { SettingsProvider, useSettings } from './components/context/SettingsContext';
 
 /**
  * Theme wrapper component

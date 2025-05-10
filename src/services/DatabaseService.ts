@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { FlashCard } from '@/models';
+import { FlashCard } from '../models';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';

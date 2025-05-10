@@ -1,4 +1,4 @@
-import { Settings } from '@/models';
+import { Settings } from '../models';
 
 /**
  * Interface for translation evaluation result

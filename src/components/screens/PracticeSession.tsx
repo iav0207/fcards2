@@ -15,11 +15,11 @@ import {
   Chip
 } from '@mui/material';
 import { Check as CheckIcon, Clear as ClearIcon } from '@mui/icons-material';
-import { FlashCard, Session, SessionResponse } from '@/models';
-import { SessionService } from '@/services/SessionService';
-import { TranslationService } from '@/services/TranslationService';
-import { DatabaseService } from '@/services/DatabaseService';
-import { useSettings } from '@/components/context/SettingsContext';
+import { FlashCard, Session, SessionResponse } from '../../models';
+import { SessionService } from '../../services/SessionService';
+import { TranslationService } from '../../services/TranslationService';
+import { DatabaseService } from '../../services/DatabaseService';
+import { useSettings } from '../context/SettingsContext';
 
 interface PracticeSessionProps {
   sourceLanguage: string;

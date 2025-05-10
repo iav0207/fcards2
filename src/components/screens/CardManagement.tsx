@@ -38,7 +38,7 @@ import {
   FileDownload as ExportIcon,
   Tag as TagIcon
 } from '@mui/icons-material';
-import { FlashCard } from '@/models';
+import { FlashCard } from '../../models';
 
 // Define supported languages (ISO 639-1 codes and names)
 const LANGUAGES = [

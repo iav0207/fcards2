@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Settings, DEFAULT_SETTINGS } from '@/models';
-import { SettingsService } from '@/services';
+import { Settings, DEFAULT_SETTINGS } from '../../models';
+import { SettingsService } from '../../services';
 
 /**
  * Settings context interface

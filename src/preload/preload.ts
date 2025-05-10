@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { FlashCard } from '@/models';
+import type { FlashCard } from '../models';
 
 /**
  * Expose protected APIs to renderer process

@@ -23,7 +23,7 @@ import {
   Settings as SettingsIcon,
   ExitToApp as ExitIcon,
 } from '@mui/icons-material';
-import { useSettings } from '@/components/context/SettingsContext';
+import { useSettings } from '../context/SettingsContext';
 
 interface HeaderProps {
   isSessionActive: boolean;

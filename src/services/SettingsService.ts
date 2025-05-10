@@ -1,4 +1,4 @@
-import { Settings, DEFAULT_SETTINGS } from '@/models';
+import { Settings, DEFAULT_SETTINGS } from '../models';
 
 /**
  * Service for managing application settings

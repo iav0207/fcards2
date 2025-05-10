@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Box, Container, CssBaseline } from '@mui/material';
 
-import Header from '@/components/layout/Header';
-import LanguageSelection from '@/components/screens/LanguageSelection';
-import PracticeSession from '@/components/screens/PracticeSession';
-import CardManagement from '@/components/screens/CardManagement';
-import Settings from '@/components/screens/Settings';
+import Header from './layout/Header';
+import LanguageSelection from './screens/LanguageSelection';
+import PracticeSession from './screens/PracticeSession';
+import CardManagement from './screens/CardManagement';
+import Settings from './screens/Settings';
 
 /**
  * Main application component

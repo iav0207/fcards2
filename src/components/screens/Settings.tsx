@@ -26,7 +26,7 @@ import {
   Save as SaveIcon,
   Restore as ResetIcon,
 } from '@mui/icons-material';
-import { useSettings } from '@/components/context/SettingsContext';
+import { useSettings } from '../context/SettingsContext';
 
 /**
  * Settings screen component

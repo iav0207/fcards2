@@ -1,4 +1,4 @@
-import { DatabaseService } from '@/services/DatabaseService';
+import { DatabaseService } from '../services/DatabaseService';
 import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';

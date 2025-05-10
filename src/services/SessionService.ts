@@ -1,4 +1,4 @@
-import { FlashCard, Session, SessionResponse } from '@/models';
+import { FlashCard, Session, SessionResponse } from '../models';
 import { v4 as uuidv4 } from 'uuid';
 import { DatabaseService } from './DatabaseService';
 

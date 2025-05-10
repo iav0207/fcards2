@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'path';
-import { DatabaseService } from '@/services/DatabaseService';
+import { DatabaseService } from '../services/DatabaseService';
 import { setupDatabase } from './setupDatabase';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
