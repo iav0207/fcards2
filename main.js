@@ -2,24 +2,37 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const DatabaseService = require('./src/services/DatabaseService');
+const TranslationService = require('./src/services/TranslationService');
+const SessionService = require('./src/services/SessionService');
 
 // Keep a reference to the main window to prevent it from being garbage collected
 let mainWindow;
 
-// Database service
+// Services
 let db;
+let translationService;
+let sessionService;
 
 /**
- * Initialize the database
+ * Initialize the services
  * @returns {Promise<void>}
  */
-async function initializeDatabase() {
-  db = new DatabaseService();
+async function initializeServices() {
   try {
+    // Initialize database
+    db = new DatabaseService();
     await db.initialize();
     console.log('Database initialized successfully');
+
+    // Initialize translation service
+    translationService = new TranslationService();
+    console.log('Translation service initialized');
+
+    // Initialize session service
+    sessionService = new SessionService({ db });
+    console.log('Session service initialized');
   } catch (error) {
-    console.error('Failed to initialize database:', error);
+    console.error('Failed to initialize services:', error);
   }
 }
 
@@ -53,7 +66,7 @@ function createWindow() {
 if (!process.env.JEST_WORKER_ID) {
   // Create window when Electron has finished initialization
   app.whenReady().then(async () => {
-    await initializeDatabase();
+    await initializeServices();
     createWindow();
   });
 
@@ -212,10 +225,75 @@ ipcMain.handle('database:import', async (event, data) => {
   }
 });
 
+// Session operations
+ipcMain.handle('session:create', async (event, options) => {
+  try {
+    return await sessionService.createSession(options);
+  } catch (error) {
+    console.error('Error creating session:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('session:getCurrentCard', async (event, sessionId) => {
+  try {
+    return await sessionService.getCurrentCard(sessionId);
+  } catch (error) {
+    console.error('Error getting current card:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('session:submitAnswer', async (event, { sessionId, answer }) => {
+  try {
+    return await sessionService.submitAnswer(sessionId, answer);
+  } catch (error) {
+    console.error('Error submitting answer:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('session:advance', async (event, sessionId) => {
+  try {
+    return await sessionService.advanceSession(sessionId);
+  } catch (error) {
+    console.error('Error advancing session:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('session:getStats', async (event, sessionId) => {
+  try {
+    return await sessionService.getSessionStats(sessionId);
+  } catch (error) {
+    console.error('Error getting session stats:', error);
+    throw error;
+  }
+});
+
+// Translation operations
+ipcMain.handle('translation:evaluate', async (event, data) => {
+  try {
+    return await translationService.evaluateTranslation(data);
+  } catch (error) {
+    console.error('Error evaluating translation:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('translation:generate', async (event, data) => {
+  try {
+    return await translationService.generateTranslation(data);
+  } catch (error) {
+    console.error('Error generating translation:', error);
+    throw error;
+  }
+});
+
 // Export components for testing
 module.exports = {
   app,
   BrowserWindow,
   createWindow,
-  initializeDatabase
+  initializeServices
 };

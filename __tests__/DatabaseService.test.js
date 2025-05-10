@@ -3,6 +3,21 @@ const FlashCard = require('../src/models/FlashCard');
 const Session = require('../src/models/Session');
 const Settings = require('../src/models/Settings');
 
+// Mock better-sqlite3
+jest.mock('better-sqlite3', () => {
+  const mockDb = {
+    prepare: jest.fn().mockReturnThis(),
+    run: jest.fn().mockReturnValue({ changes: 1 }),
+    get: jest.fn(),
+    all: jest.fn().mockReturnValue([]),
+    exec: jest.fn(),
+    close: jest.fn(),
+    pragma: jest.fn()
+  };
+
+  return jest.fn(() => mockDb);
+});
+
 // Mock electron app
 jest.mock('electron', () => ({
   app: {
