@@ -401,6 +401,12 @@
         <div id="operation-result-stats" class="session-stats">
           <!-- Stats will be dynamically inserted here -->
         </div>
+        <div id="operation-result-path-container" style="display: none; margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
+          <div class="info-item">
+            <span class="info-label">File Location:</span>
+            <span class="info-value" id="operation-result-path" style="word-break: break-all;"></span>
+          </div>
+        </div>
       </div>
       <div class="button-container">
         <button id="back-to-home-from-result-btn">Back to Home</button>
@@ -677,9 +683,12 @@
         // Show success screen
         const stats = [
           { label: 'Flashcards', value: result.stats.flashcardsCount },
-          { label: 'Sessions', value: result.stats.sessionsCount },
-          { label: 'File Location', value: result.path }
+          { label: 'Sessions', value: result.stats.sessionsCount }
         ];
+
+        // Add file path in a separate info item, not as a stat with large font
+        document.getElementById('operation-result-path').textContent = result.path;
+        document.getElementById('operation-result-path-container').style.display = 'block';
 
         showOperationResult('Export Successful', 'Your data has been successfully exported!', stats, 'correct');
       } catch (error) {
@@ -759,6 +768,9 @@
         item.appendChild(label);
         statsContainer.appendChild(item);
       });
+
+      // Hide path container by default (will be shown only for export)
+      document.getElementById('operation-result-path-container').style.display = 'none';
 
       showScreen('operationResult');
     }
