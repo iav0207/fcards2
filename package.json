@@ -2,7 +2,7 @@
   "name": "fcardsweb2",
   "version": "0.1.0",
   "description": "A desktop application for language learning using a flashcard system",
-  "main": "dist-electron/main/main.js",
+  "main": "electron-main.js",
   "scripts": {
     "dev": "concurrently \"vite\" \"electron electron-main.js\"",
     "build": "tsc && vite build",
