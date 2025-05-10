@@ -17,22 +17,165 @@
       justify-content: center;
       height: 100vh;
     }
-    
+
     h1 {
       margin-bottom: 10px;
       color: #90caf9;
     }
-    
+
     p {
-      margin-bottom: 30px;
+      margin-bottom: 20px;
       text-align: center;
       max-width: 600px;
+    }
+
+    .info-container {
+      background-color: #1e1e1e;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+      width: 80%;
+      max-width: 500px;
+    }
+
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 10px;
+    }
+
+    .info-label {
+      font-weight: bold;
+      color: #90caf9;
+    }
+
+    .info-value {
+      color: #bbb;
+    }
+
+    button {
+      background-color: #90caf9;
+      color: #121212;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #64b5f6;
+    }
+
+    .button-container {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
   <h1>FlashCards Desktop</h1>
   <p>A language learning application to create and practice flashcards</p>
-  <p>Hello World! This is the first step in our application.</p>
+
+  <div class="info-container">
+    <h2>Database Information</h2>
+    <div id="db-stats">
+      <div class="info-item">
+        <span class="info-label">FlashCards:</span>
+        <span class="info-value" id="flashcards-count">Loading...</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Practice Sessions:</span>
+        <span class="info-value" id="sessions-count">Loading...</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Active Sessions:</span>
+        <span class="info-value" id="active-sessions-count">Loading...</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Completed Sessions:</span>
+        <span class="info-value" id="completed-sessions-count">Loading...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-container">
+    <h2>App Information</h2>
+    <div id="version-info">
+      <div class="info-item">
+        <span class="info-label">Node.js Version:</span>
+        <span class="info-value" id="node-version">Loading...</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Chromium Version:</span>
+        <span class="info-value" id="chrome-version">Loading...</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Electron Version:</span>
+        <span class="info-value" id="electron-version">Loading...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="button-container">
+    <button id="refresh-stats">Refresh Stats</button>
+    <button id="create-sample-card">Create Sample Card</button>
+  </div>
+
+  <script>
+    // Display version information
+    document.getElementById('node-version').textContent = window.versions.node();
+    document.getElementById('chrome-version').textContent = window.versions.chrome();
+    document.getElementById('electron-version').textContent = window.versions.electron();
+
+    // Load database stats
+    async function loadDatabaseStats() {
+      try {
+        const stats = await window.flashcards.getDatabaseStats();
+        document.getElementById('flashcards-count').textContent = stats.flashcardsCount;
+        document.getElementById('sessions-count').textContent = stats.sessionsCount;
+        document.getElementById('active-sessions-count').textContent = stats.activeSessionsCount;
+        document.getElementById('completed-sessions-count').textContent = stats.completedSessionsCount;
+      } catch (error) {
+        console.error('Error loading database stats:', error);
+      }
+    }
+
+    // Create a sample flashcard
+    async function createSampleCard() {
+      try {
+        const sampleCard = {
+          content: 'Hello',
+          sourceLanguage: 'en',
+          comment: 'A basic greeting',
+          userTranslation: '',
+          tags: ['greeting', 'basic']
+        };
+
+        const savedCard = await window.flashcards.saveFlashCard(sampleCard);
+        console.log('Sample card created:', savedCard);
+
+        // Refresh stats after creating a card
+        await loadDatabaseStats();
+
+        alert('Sample card created successfully!');
+      } catch (error) {
+        console.error('Error creating sample card:', error);
+        alert('Error creating sample card: ' + error.message);
+      }
+    }
+
+    // Initial load
+    loadDatabaseStats();
+
+    // Button event listeners
+    document.getElementById('refresh-stats').addEventListener('click', loadDatabaseStats);
+    document.getElementById('create-sample-card').addEventListener('click', createSampleCard);
+  </script>
 </body>
 </html>
