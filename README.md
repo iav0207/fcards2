@@ -70,6 +70,7 @@ For detailed development guidelines, see [DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 - [DESIGN.md](docs/DESIGN.md): Application design document
 - [DEVELOPMENT.md](docs/DEVELOPMENT.md): Development guidelines
+- [SETUP.md](docs/SETUP.md): Setup instructions and environment configuration
 - [RFCs](docs/rfc/): Feature specifications and implementation plans
 
 ## License
