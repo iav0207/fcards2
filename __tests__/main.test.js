@@ -16,6 +16,10 @@ jest.mock('electron', () => ({
   })),
   ipcMain: {
     handle: jest.fn()
+  },
+  dialog: {
+    showOpenDialog: jest.fn().mockResolvedValue({ filePaths: ['/mock/file.json'], canceled: false }),
+    showSaveDialog: jest.fn().mockResolvedValue({ filePath: '/mock/file.json', canceled: false })
   }
 }));
 
@@ -29,10 +33,16 @@ jest.mock('../src/services/DatabaseService', () => {
 
 // Mock TranslationService for testing
 jest.mock('../src/services/TranslationService', () => {
-  return jest.fn().mockImplementation(() => ({
+  const mockService = jest.fn().mockImplementation(options => ({
     evaluateTranslation: jest.fn(),
-    generateTranslation: jest.fn()
+    generateTranslation: jest.fn(),
+    settings: {
+      translationApiProvider: options?.apiProvider || 'gemini',
+      translationApiKey: options?.apiKey || ''
+    }
   }));
+
+  return mockService;
 });
 
 // Mock SessionService for testing
@@ -85,24 +95,163 @@ describe('Main process', () => {
   it('initializes services successfully', async () => {
     // Reset modules to ensure fresh imports
     jest.resetModules();
-    
+
     // Import fresh instance
     const main = require('../main.js');
-    
+
     // Call initialize services
     await main.initializeServices();
-    
+
     // Verify services were initialized
     const DatabaseService = require('../src/services/DatabaseService');
     const TranslationService = require('../src/services/TranslationService');
     const SessionService = require('../src/services/SessionService');
-    
+
     expect(DatabaseService).toHaveBeenCalled();
     expect(TranslationService).toHaveBeenCalled();
     expect(SessionService).toHaveBeenCalled();
-    
+
     // Verify database was initialized
     const dbInstance = DatabaseService.mock.results[0].value;
     expect(dbInstance.initialize).toHaveBeenCalled();
+  });
+
+  describe('Translation provider selection', () => {
+    // Mock environment utility for testing
+    const originalEnv = process.env;
+
+    beforeEach(() => {
+      // Reset modules for each test
+      jest.resetModules();
+
+      // Mock environment utility
+      jest.mock('../src/utils/environment', () => ({
+        getEnvironmentConfig: jest.fn().mockReturnValue({
+          GEMINI_API_KEY: '',
+          OPENAI_API_KEY: '',
+          NODE_ENV: 'test'
+        }),
+        checkApiKeysAvailability: jest.fn().mockReturnValue({
+          gemini: false,
+          openai: false,
+          hasAnyTranslationApi: false
+        }),
+        isDevelopment: jest.fn().mockReturnValue(true)
+      }));
+
+      // Clear mocks
+      const TranslationService = require('../src/services/TranslationService');
+      TranslationService.mockClear();
+    });
+
+    afterAll(() => {
+      // Restore original environment
+      process.env = originalEnv;
+    });
+
+    it('initializes with Gemini API when available', async () => {
+      // Mock environment utility to return Gemini API key
+      const environment = require('../src/utils/environment');
+      environment.getEnvironmentConfig.mockReturnValue({
+        GEMINI_API_KEY: 'mock-gemini-key',
+        OPENAI_API_KEY: '',
+        NODE_ENV: 'test'
+      });
+
+      environment.checkApiKeysAvailability.mockReturnValue({
+        gemini: true,
+        openai: false,
+        hasAnyTranslationApi: true
+      });
+
+      // Initialize services
+      const main = require('../main.js');
+      await main.initializeServices();
+
+      // Verify TranslationService was initialized with Gemini
+      const TranslationService = require('../src/services/TranslationService');
+      expect(TranslationService).toHaveBeenCalledWith(expect.objectContaining({
+        apiProvider: 'gemini',
+        apiKey: 'mock-gemini-key'
+      }));
+    });
+
+    it('initializes with OpenAI API when Gemini is not available', async () => {
+      // Mock environment utility to return OpenAI API key only
+      const environment = require('../src/utils/environment');
+      environment.getEnvironmentConfig.mockReturnValue({
+        GEMINI_API_KEY: '',
+        OPENAI_API_KEY: 'mock-openai-key',
+        NODE_ENV: 'test'
+      });
+
+      environment.checkApiKeysAvailability.mockReturnValue({
+        gemini: false,
+        openai: true,
+        hasAnyTranslationApi: true
+      });
+
+      // Initialize services
+      const main = require('../main.js');
+      await main.initializeServices();
+
+      // Verify TranslationService was initialized with OpenAI
+      const TranslationService = require('../src/services/TranslationService');
+      expect(TranslationService).toHaveBeenCalledWith(expect.objectContaining({
+        apiProvider: 'openai',
+        apiKey: 'mock-openai-key'
+      }));
+    });
+
+    it('initializes with default implementation when no API keys are available', async () => {
+      // Mock environment utility to return no API keys
+      const environment = require('../src/utils/environment');
+      environment.getEnvironmentConfig.mockReturnValue({
+        GEMINI_API_KEY: '',
+        OPENAI_API_KEY: '',
+        NODE_ENV: 'test'
+      });
+
+      environment.checkApiKeysAvailability.mockReturnValue({
+        gemini: false,
+        openai: false,
+        hasAnyTranslationApi: false
+      });
+
+      // Initialize services
+      const main = require('../main.js');
+      await main.initializeServices();
+
+      // Verify TranslationService was initialized with default options
+      const TranslationService = require('../src/services/TranslationService');
+      expect(TranslationService).toHaveBeenCalledWith();
+    });
+
+    it('prefers Gemini when both APIs are available', async () => {
+      // Mock environment utility to return both API keys
+      const environment = require('../src/utils/environment');
+      environment.getEnvironmentConfig.mockReturnValue({
+        GEMINI_API_KEY: 'mock-gemini-key',
+        OPENAI_API_KEY: 'mock-openai-key',
+        NODE_ENV: 'test'
+      });
+
+      environment.checkApiKeysAvailability.mockReturnValue({
+        gemini: true,
+        openai: true,
+        hasAnyTranslationApi: true
+      });
+
+      // Initialize services
+      const main = require('../main.js');
+      await main.initializeServices();
+
+      // Verify TranslationService was initialized with Gemini (preferred)
+      const TranslationService = require('../src/services/TranslationService');
+      expect(TranslationService).toHaveBeenCalledWith(expect.objectContaining({
+        apiProvider: 'gemini',
+        apiKey: 'mock-gemini-key'
+      }));
+    });
   });
 });

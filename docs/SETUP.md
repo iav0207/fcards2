@@ -30,9 +30,11 @@ This document provides instructions for setting up the development environment a
 
 ## API Keys Configuration
 
-The application uses Gemini API (with OpenAI as fallback) for translation evaluation. You'll need to set up API keys to use these features.
+The application uses Gemini API (with OpenAI as fallback) for translation evaluation. **This functionality is required for accurate translation assessment.**
 
-### Gemini API
+> ⚠️ **Important**: Without API keys, the application will fall back to a basic translation evaluation that may not be as accurate.
+
+### Gemini API (Primary Provider)
 
 1. Get a Gemini API key from the [Google AI Studio](https://makersuite.google.com/app/apikey).
 
@@ -60,7 +62,7 @@ The application uses Gemini API (with OpenAI as fallback) for translation evalua
    echo %GEMINI_API_KEY% # Windows
    ```
 
-### OpenAI API (Fallback)
+### OpenAI API (Fallback Provider)
 
 1. Get an OpenAI API key from the [OpenAI Platform](https://platform.openai.com/api-keys).
 
@@ -72,10 +74,37 @@ The application uses Gemini API (with OpenAI as fallback) for translation evalua
    export OPENAI_API_KEY="your-api-key-here"
    ```
 
+   Then source your shell configuration:
+   ```bash
+   source ~/.zshrc  # or source ~/.bashrc
+   ```
+
    **Windows:**
    ```cmd
    set OPENAI_API_KEY=your-api-key-here
    ```
+
+3. Verify the key is set:
+   ```bash
+   echo $OPENAI_API_KEY  # macOS/Linux
+   echo %OPENAI_API_KEY% # Windows
+   ```
+
+### API Key for Development
+
+If you're developing the application, make sure to restart your terminal or source your shell configuration file before starting the development server to ensure the environment variables are loaded:
+
+```bash
+# Source your configuration
+source ~/.zshrc  # or ~/.bashrc for Linux
+
+# Verify API keys are set
+echo $GEMINI_API_KEY
+echo $OPENAI_API_KEY
+
+# Then start the development server
+npm run dev
+```
 
 ## Development Workflow
 
@@ -95,17 +124,27 @@ The application uses Gemini API (with OpenAI as fallback) for translation evalua
 
 If you're having trouble with API keys:
 
-1. Verify the key is set in your environment:
+1. Verify the keys are set in your environment:
    ```bash
    echo $GEMINI_API_KEY
+   echo $OPENAI_API_KEY
    ```
 
-2. Make sure you've sourced your shell configuration:
+2. Make sure you've sourced your shell configuration after adding the keys:
    ```bash
    source ~/.zshrc  # or source ~/.bashrc
    ```
 
-3. If running in a new terminal window, remember that you'll need to set the environment variables again or source your shell configuration.
+3. If running in a new terminal window, remember that you'll need to source your shell configuration file to load the environment variables.
+
+4. Check the application logs for warnings like "No translation providers initialized. Using stub implementation" which indicates it couldn't find valid API keys.
+
+5. For testing purposes, you can temporarily set the keys directly in your terminal session:
+   ```bash
+   export GEMINI_API_KEY="your-key-here"
+   export OPENAI_API_KEY="your-key-here"
+   npm run dev
+   ```
 
 ### Application Issues
 

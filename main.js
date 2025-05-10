@@ -24,9 +24,32 @@ async function initializeServices() {
     await db.initialize();
     console.log('Database initialized successfully');
 
-    // Initialize translation service
-    translationService = new TranslationService();
-    console.log('Translation service initialized');
+    // Initialize translation service with API keys from environment
+    const { getEnvironmentConfig, checkApiKeysAvailability } = require('./src/utils/environment');
+    const apiKeys = getEnvironmentConfig();
+    const apiAvailability = checkApiKeysAvailability();
+
+    console.log('API keys availability:', {
+      gemini: apiAvailability.gemini ? 'Available' : 'Not available',
+      openai: apiAvailability.openai ? 'Available' : 'Not available'
+    });
+
+    if (apiAvailability.gemini) {
+      translationService = new TranslationService({
+        apiProvider: 'gemini',
+        apiKey: apiKeys.GEMINI_API_KEY
+      });
+      console.log('Translation service initialized with Gemini API');
+    } else if (apiAvailability.openai) {
+      translationService = new TranslationService({
+        apiProvider: 'openai',
+        apiKey: apiKeys.OPENAI_API_KEY
+      });
+      console.log('Translation service initialized with OpenAI API');
+    } else {
+      translationService = new TranslationService();
+      console.log('Translation service initialized with STUB implementation (no API keys available)');
+    }
 
     // Initialize session service
     sessionService = new SessionService({ db });
