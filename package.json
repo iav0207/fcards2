@@ -4,9 +4,9 @@
   "description": "A desktop application for language learning using a flashcard system",
   "main": "dist-electron/main/main.js",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"vite\" \"electron electron-main.js\"",
     "build": "tsc && vite build",
-    "package": "electron-builder",
+    "package": "npm run build && electron-builder",
     "lint": "eslint src --ext ts,tsx",
     "lint:fix": "eslint src --ext ts,tsx --fix",
     "test": "vitest run",
@@ -21,6 +21,7 @@
     "@typescript-eslint/eslint-plugin": "^6.12.0",
     "@typescript-eslint/parser": "^6.12.0",
     "@vitejs/plugin-react": "^4.2.0",
+    "concurrently": "^9.1.2",
     "electron": "^27.1.2",
     "electron-builder": "^24.6.4",
     "eslint": "^8.54.0",
@@ -45,7 +46,10 @@
   "build": {
     "appId": "com.example.fcardsweb2",
     "productName": "FlashCards Desktop",
-    "files": ["dist/**/*", "node_modules/**/*"],
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*"
+    ],
     "directories": {
       "buildResources": "assets",
       "output": "release"
@@ -54,10 +58,15 @@
       "category": "public.app-category.education"
     },
     "win": {
-      "target": ["nsis"]
+      "target": [
+        "nsis"
+      ]
     },
     "linux": {
-      "target": ["AppImage", "deb"]
+      "target": [
+        "AppImage",
+        "deb"
+      ]
     }
   }
 }
