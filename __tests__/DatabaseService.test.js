@@ -5,11 +5,120 @@ const Settings = require('../src/models/Settings');
 
 // Mock better-sqlite3
 jest.mock('better-sqlite3', () => {
+  // Create mock data stores
+  const mockFlashcards = new Map();
+  const mockSessions = new Map();
+  let mockSettings = null;
+
+  // Mock for prepare method with specific behaviors
+  const mockPrepare = jest.fn().mockImplementation((query) => {
+    // FlashCard operations
+    if (query.includes('INSERT OR REPLACE INTO flashcards')) {
+      return {
+        run: jest.fn().mockImplementation((id, content, sourceLanguage, comment, userTranslation, tags, createdAt, updatedAt) => {
+          mockFlashcards.set(id, {
+            id, content, sourceLanguage, comment, userTranslation, tags, createdAt, updatedAt
+          });
+          return { changes: 1 };
+        })
+      };
+    }
+    if (query.includes('SELECT * FROM flashcards WHERE id = ?')) {
+      return {
+        get: jest.fn().mockImplementation((id) => mockFlashcards.get(id))
+      };
+    }
+    if (query.includes('SELECT * FROM flashcards')) {
+      return {
+        all: jest.fn().mockImplementation(() => Array.from(mockFlashcards.values()))
+      };
+    }
+    if (query.includes('DELETE FROM flashcards WHERE id = ?')) {
+      return {
+        run: jest.fn().mockImplementation((id) => {
+          const result = mockFlashcards.delete(id);
+          return { changes: result ? 1 : 0 };
+        })
+      };
+    }
+
+    // Session operations
+    if (query.includes('INSERT OR REPLACE INTO sessions')) {
+      return {
+        run: jest.fn().mockImplementation((id, sourceLanguage, targetLanguage, cardIds, currentCardIndex, responses, createdAt, completedAt) => {
+          mockSessions.set(id, {
+            id, sourceLanguage, targetLanguage, cardIds, currentCardIndex, responses, createdAt, completedAt
+          });
+          return { changes: 1 };
+        })
+      };
+    }
+    if (query.includes('SELECT * FROM sessions WHERE id = ?')) {
+      return {
+        get: jest.fn().mockImplementation((id) => mockSessions.get(id))
+      };
+    }
+    if (query.includes('SELECT * FROM sessions')) {
+      return {
+        all: jest.fn().mockImplementation(() => Array.from(mockSessions.values()))
+      };
+    }
+    if (query.includes('DELETE FROM sessions WHERE id = ?')) {
+      return {
+        run: jest.fn().mockImplementation((id) => {
+          const result = mockSessions.delete(id);
+          return { changes: result ? 1 : 0 };
+        })
+      };
+    }
+
+    // Settings operations
+    if (query.includes('INSERT OR REPLACE INTO settings')) {
+      return {
+        run: jest.fn().mockImplementation((id, settings) => {
+          mockSettings = { id, settings };
+          return { changes: 1 };
+        })
+      };
+    }
+    if (query.includes('SELECT settings FROM settings WHERE id = ?')) {
+      return {
+        get: jest.fn().mockImplementation(() => mockSettings)
+      };
+    }
+
+    // Stats operations
+    if (query.includes('COUNT(*) as count FROM flashcards')) {
+      return {
+        get: jest.fn().mockReturnValue({ count: mockFlashcards.size })
+      };
+    }
+    if (query.includes('COUNT(*) as count FROM sessions WHERE completedAt IS NULL')) {
+      return {
+        get: jest.fn().mockReturnValue({ count: 1 })
+      };
+    }
+    if (query.includes('COUNT(*) as count FROM sessions WHERE completedAt IS NOT NULL')) {
+      return {
+        get: jest.fn().mockReturnValue({ count: 1 })
+      };
+    }
+    if (query.includes('COUNT(*) as count FROM sessions')) {
+      return {
+        get: jest.fn().mockReturnValue({ count: mockSessions.size })
+      };
+    }
+
+    // Default behavior
+    return {
+      run: jest.fn().mockReturnValue({ changes: 0 }),
+      get: jest.fn(),
+      all: jest.fn().mockReturnValue([])
+    };
+  });
+
   const mockDb = {
-    prepare: jest.fn().mockReturnThis(),
-    run: jest.fn().mockReturnValue({ changes: 1 }),
-    get: jest.fn(),
-    all: jest.fn().mockReturnValue([]),
+    prepare: mockPrepare,
     exec: jest.fn(),
     close: jest.fn(),
     pragma: jest.fn()
