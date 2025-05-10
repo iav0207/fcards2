@@ -4,11 +4,18 @@
   "description": "A desktop application for language learning using a flashcard system",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dev": "electron .",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "echo 'No linting configured yet'"
   },
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^27.1.2"
+    "electron": "^27.1.2",
+    "jest": "^29.7.0",
+    "spectron": "^19.0.0"
   }
 }

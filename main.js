@@ -28,19 +28,29 @@ function createWindow() {
   });
 }
 
-// Create window when Electron has finished initialization
-app.whenReady().then(createWindow);
+// Don't initialize the app when running tests
+if (!process.env.JEST_WORKER_ID) {
+  // Create window when Electron has finished initialization
+  app.whenReady().then(createWindow);
 
-// Quit when all windows are closed, except on macOS
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
+  // Quit when all windows are closed, except on macOS
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit();
+    }
+  });
 
-// On macOS, recreate the window when dock icon is clicked and no windows are open
-app.on('activate', () => {
-  if (mainWindow === null) {
-    createWindow();
-  }
-});
+  // On macOS, recreate the window when dock icon is clicked and no windows are open
+  app.on('activate', () => {
+    if (mainWindow === null) {
+      createWindow();
+    }
+  });
+}
+
+// Export components for testing
+module.exports = {
+  app,
+  BrowserWindow,
+  createWindow
+};
