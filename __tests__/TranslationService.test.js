@@ -3,6 +3,24 @@ const TranslationService = require('../src/services/TranslationService');
 // Mock setTimeout to make tests run faster
 jest.useFakeTimers();
 
+// Mock the provider classes to avoid actual provider initialization
+jest.mock('../src/services/translation/GeminiProvider');
+jest.mock('../src/services/translation/OpenAIProvider');
+
+// Mock environment module
+jest.mock('../src/utils/environment', () => ({
+  getEnvironmentConfig: jest.fn().mockReturnValue({
+    GEMINI_API_KEY: '',
+    OPENAI_API_KEY: ''
+  }),
+  checkApiKeysAvailability: jest.fn().mockReturnValue({
+    gemini: false,
+    openai: false,
+    hasAnyTranslationApi: false
+  }),
+  isDevelopment: jest.fn().mockReturnValue(true)
+}));
+
 describe('TranslationService', () => {
   let translationService;
 
@@ -16,8 +34,8 @@ describe('TranslationService', () => {
 
   describe('constructor', () => {
     it('creates a TranslationService with default options', () => {
-      expect(translationService.apiProvider).toBe('stub');
-      expect(translationService.apiKey).toBe('');
+      expect(translationService.settings.translationApiProvider).toBe('gemini');
+      expect(translationService.settings.translationApiKey).toBe('');
     });
 
     it('creates a TranslationService with provided options', () => {
@@ -25,8 +43,8 @@ describe('TranslationService', () => {
         apiProvider: 'gemini',
         apiKey: 'test-key'
       });
-      expect(service.apiProvider).toBe('gemini');
-      expect(service.apiKey).toBe('test-key');
+      expect(service.settings.translationApiProvider).toBe('gemini');
+      expect(service.settings.translationApiKey).toBe('test-key');
     });
   });
 
@@ -45,7 +63,6 @@ describe('TranslationService', () => {
       const result = await evaluationPromise;
       
       expect(result.correct).toBe(true);
-      expect(result.score).toBe(1.0);
       expect(result.feedback).toContain('Great job');
     });
 

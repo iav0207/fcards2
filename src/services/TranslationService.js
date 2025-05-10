@@ -1,16 +1,90 @@
+const { getEnvironmentConfig, checkApiKeysAvailability } = require('../utils/environment');
+const GeminiProvider = require('./translation/GeminiProvider');
+const OpenAIProvider = require('./translation/OpenAIProvider');
+const Settings = require('../models/Settings');
+
 /**
- * Service for evaluating translations using AI (stub implementation for now)
+ * Service for evaluating translations using AI
  */
 class TranslationService {
   /**
    * Create a new TranslationService instance
    * @param {Object} options - Configuration options
+   * @param {Object} [options.settings] - Settings object
    * @param {string} [options.apiProvider] - API provider ('gemini' or 'openai')
    * @param {string} [options.apiKey] - API key for the provider
+   * @param {Object} [options.db] - DatabaseService instance for settings
    */
   constructor(options = {}) {
-    this.apiProvider = options.apiProvider || 'stub';
-    this.apiKey = options.apiKey || '';
+    this.db = options.db;
+    
+    // Initialize settings from options or defaults
+    this.settings = options.settings || new Settings();
+    
+    // If explicit apiProvider/apiKey given in options, override settings
+    if (options.apiProvider) {
+      this.settings.translationApiProvider = options.apiProvider;
+    }
+    if (options.apiKey) {
+      this.settings.translationApiKey = options.apiKey;
+    }
+    
+    // Check environment variables if no API key is set
+    if (!this.settings.translationApiKey) {
+      const config = getEnvironmentConfig();
+      const apiAvailability = checkApiKeysAvailability();
+      
+      if (apiAvailability.gemini && this.settings.translationApiProvider === 'gemini') {
+        this.settings.translationApiKey = config.GEMINI_API_KEY;
+      } else if (apiAvailability.openai && this.settings.translationApiProvider === 'openai') {
+        this.settings.translationApiKey = config.OPENAI_API_KEY;
+      } else if (apiAvailability.gemini) {
+        this.settings.translationApiProvider = 'gemini';
+        this.settings.translationApiKey = config.GEMINI_API_KEY;
+      } else if (apiAvailability.openai) {
+        this.settings.translationApiProvider = 'openai';
+        this.settings.translationApiKey = config.OPENAI_API_KEY;
+      }
+    }
+    
+    // Initialize API providers
+    this._initializeProviders();
+  }
+  
+  /**
+   * Initialize API providers based on configuration
+   * @private
+   */
+  _initializeProviders() {
+    this.providers = {};
+    
+    // Initialize Gemini provider if API key is available
+    if (this.settings.translationApiKey && this.settings.translationApiProvider === 'gemini') {
+      try {
+        this.providers.gemini = new GeminiProvider(this.settings.translationApiKey);
+        console.log('Gemini provider initialized');
+      } catch (error) {
+        console.error('Failed to initialize Gemini provider:', error.message);
+      }
+    }
+    
+    // Initialize OpenAI provider if API key is available
+    if (this.settings.translationApiKey && this.settings.translationApiProvider === 'openai') {
+      try {
+        this.providers.openai = new OpenAIProvider(this.settings.translationApiKey);
+        console.log('OpenAI provider initialized');
+      } catch (error) {
+        console.error('Failed to initialize OpenAI provider:', error.message);
+      }
+    }
+    
+    // Set primary provider based on settings
+    this.primaryProvider = this.settings.translationApiProvider;
+    
+    // Log initialization status
+    if (Object.keys(this.providers).length === 0) {
+      console.warn('No translation providers initialized. Using stub implementation.');
+    }
   }
 
   /**
@@ -24,12 +98,92 @@ class TranslationService {
    * @returns {Promise<Object>} - Evaluation result
    */
   async evaluateTranslation(data) {
-    // In a real implementation, this would call the AI API
-    // For now, we'll return a stub response
+    try {
+      // Try to use the primary provider
+      const primaryProvider = this.providers[this.primaryProvider];
+      if (primaryProvider) {
+        return await primaryProvider.evaluateTranslation(data);
+      }
+      
+      // If primary provider not available, try fallback provider
+      const fallbackProvider = this._getFallbackProvider();
+      if (fallbackProvider) {
+        return await fallbackProvider.evaluateTranslation(data);
+      }
+      
+      // If no providers are available, use the baseline algorithm
+      return this._evaluateTranslationBaseline(data);
+    } catch (error) {
+      console.error('Translation evaluation error:', error.message);
+      
+      // Fall back to baseline method in case of API errors
+      return this._evaluateTranslationBaseline(data);
+    }
+  }
 
-    // Simulate a network delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
+  /**
+   * Generate a reference translation
+   * @param {Object} data - Translation data
+   * @param {string} data.content - Content to translate
+   * @param {string} data.sourceLanguage - Source language code
+   * @param {string} data.targetLanguage - Target language code 
+   * @returns {Promise<string>} - Generated translation
+   */
+  async generateTranslation(data) {
+    try {
+      // Try to use the primary provider
+      const primaryProvider = this.providers[this.primaryProvider];
+      if (primaryProvider) {
+        return await primaryProvider.generateTranslation(data);
+      }
+      
+      // If primary provider not available, try fallback provider
+      const fallbackProvider = this._getFallbackProvider();
+      if (fallbackProvider) {
+        return await fallbackProvider.generateTranslation(data);
+      }
+      
+      // If no providers are available, use the baseline algorithm
+      return this._generateTranslationBaseline(data);
+    } catch (error) {
+      console.error('Translation generation error:', error.message);
+      
+      // Fall back to baseline method in case of API errors
+      return this._generateTranslationBaseline(data);
+    }
+  }
+  
+  /**
+   * Get fallback provider (a provider that's not the primary one)
+   * @private
+   * @returns {Object|null} - Fallback provider or null if none available
+   */
+  _getFallbackProvider() {
+    const providers = Object.keys(this.providers);
+    if (providers.length === 0) {
+      return null;
+    }
+    
+    // If there's only the primary provider, return null
+    if (providers.length === 1 && providers[0] === this.primaryProvider) {
+      return null;
+    }
+    
+    // Return the first provider that's not the primary one
+    const fallbackKey = providers.find(key => key !== this.primaryProvider);
+    return fallbackKey ? this.providers[fallbackKey] : null;
+  }
+  
+  /**
+   * Baseline implementation for translation evaluation
+   * Used when no API providers are available
+   * @private
+   * @param {Object} data - Translation data
+   * @returns {Object} - Evaluation result
+   */
+  _evaluateTranslationBaseline(data) {
+    console.log('Using baseline translation evaluation');
+    
     // If reference translation is provided, do a simple comparison
     if (data.referenceTranslation) {
       const userTranslation = data.userTranslation.toLowerCase().trim();
@@ -77,7 +231,7 @@ class TranslationService {
       }
     }
 
-    // STUB: Without reference, always return "correct" for any translation
+    // Without reference, always return "correct" for any translation
     // This is just for testing the game flow
     return {
       correct: true,
@@ -91,19 +245,17 @@ class TranslationService {
       }
     };
   }
-
+  
   /**
-   * Generate a reference translation
+   * Baseline implementation for translation generation
+   * Used when no API providers are available
+   * @private
    * @param {Object} data - Translation data
-   * @param {string} data.content - Content to translate
-   * @param {string} data.sourceLanguage - Source language code
-   * @param {string} data.targetLanguage - Target language code 
-   * @returns {Promise<string>} - Generated translation
+   * @returns {string} - Generated translation
    */
-  async generateTranslation(data) {
-    // Simulate a network delay
-    await new Promise(resolve => setTimeout(resolve, 700));
-
+  _generateTranslationBaseline(data) {
+    console.log('Using baseline translation generation');
+    
     // STUB: Return basic translations for common phrases
     // This is just for testing the game flow
     const translations = {
@@ -140,17 +292,7 @@ class TranslationService {
           'excuse me': 'Excusez-moi',
           'sorry': 'Désolé',
           'good morning': 'Bonjour',
-          'good evening': 'Bonsoir',
-          'how are you': 'Comment allez-vous',
-          'fine': 'Bien',
-          'what is your name': 'Comment vous appelez-vous',
-          'my name is': 'Je m\'appelle',
-          'nice to meet you': 'Enchanté',
-          'where is': 'Où est',
-          'when': 'Quand',
-          'why': 'Pourquoi',
-          'today': 'Aujourd\'hui',
-          'tomorrow': 'Demain'
+          'good evening': 'Bonsoir'
         },
         'es': {
           'hello': 'Hola',
@@ -162,17 +304,26 @@ class TranslationService {
           'excuse me': 'Disculpe',
           'sorry': 'Lo siento',
           'good morning': 'Buenos días',
-          'good evening': 'Buenas noches',
-          'how are you': 'Cómo estás',
-          'fine': 'Bien',
-          'what is your name': 'Cómo te llamas',
-          'my name is': 'Me llamo',
-          'nice to meet you': 'Encantado de conocerte',
-          'where is': 'Dónde está',
-          'when': 'Cuándo',
-          'why': 'Por qué',
-          'today': 'Hoy',
-          'tomorrow': 'Mañana'
+          'good evening': 'Buenas noches'
+        }
+      },
+      'de': {
+        'en': {
+          'hallo': 'Hello',
+          'auf wiedersehen': 'Goodbye',
+          'danke': 'Thank you',
+          'ja': 'Yes',
+          'nein': 'No',
+          'bitte': 'Please',
+          'entschuldigung': 'Excuse me',
+          'es tut mir leid': 'I am sorry',
+          'guten morgen': 'Good morning',
+          'guten abend': 'Good evening',
+          'wie geht es dir': 'How are you',
+          'gut': 'Fine',
+          'wie heißt du': 'What is your name',
+          'ich heiße': 'My name is',
+          'schön, dich kennenzulernen': 'Nice to meet you'
         }
       }
     };
