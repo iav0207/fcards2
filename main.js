@@ -1,5 +1,5 @@
 // Basic Electron main process file
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const DatabaseService = require('./src/services/DatabaseService');
 const TranslationService = require('./src/services/TranslationService');
@@ -207,18 +207,105 @@ ipcMain.handle('database:stats', async (event) => {
   }
 });
 
-ipcMain.handle('database:export', async (event) => {
+ipcMain.handle('database:export', async (event, options = {}) => {
   try {
-    return db.exportData();
+    // Get the data to export
+    const data = db.exportData();
+
+    // Add metadata
+    const exportData = {
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      appInfo: {
+        name: 'FlashCards Desktop',
+        version: app.getVersion() || '0.1.0'
+      },
+      data
+    };
+
+    // Show save dialog to get file path
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export FlashCards Data',
+      defaultPath: 'flashcards-export.json',
+      filters: [
+        { name: 'JSON Files', extensions: ['json'] },
+        { name: 'All Files', extensions: ['*'] }
+      ],
+      properties: ['createDirectory', 'showOverwriteConfirmation']
+    });
+
+    if (canceled || !filePath) {
+      return { success: false, reason: 'canceled' };
+    }
+
+    // Write to file
+    const fs = require('fs');
+    await fs.promises.writeFile(filePath, JSON.stringify(exportData, null, 2));
+
+    return {
+      success: true,
+      path: filePath,
+      stats: {
+        flashcardsCount: data.flashcards.length,
+        sessionsCount: data.sessions.length,
+        settingsExported: !!data.settings
+      }
+    };
   } catch (error) {
     console.error('Error exporting database:', error);
     throw error;
   }
 });
 
-ipcMain.handle('database:import', async (event, data) => {
+ipcMain.handle('database:import', async (event, options = {}) => {
   try {
-    return db.importData(data);
+    // Show open dialog to get file path
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      title: 'Import FlashCards Data',
+      filters: [
+        { name: 'JSON Files', extensions: ['json'] },
+        { name: 'All Files', extensions: ['*'] }
+      ],
+      properties: ['openFile']
+    });
+
+    if (canceled || !filePaths || filePaths.length === 0) {
+      return { success: false, reason: 'canceled' };
+    }
+
+    // Read the file
+    const fs = require('fs');
+    const fileData = await fs.promises.readFile(filePaths[0], 'utf-8');
+    const importData = JSON.parse(fileData);
+
+    // Validate the import format
+    if (!importData.data || (!importData.data.flashcards && !importData.data.sessions)) {
+      return { success: false, reason: 'invalid_format' };
+    }
+
+    // Merge or replace option (merge is default)
+    const shouldReplace = options.mode === 'replace';
+
+    // If replacing, first clear the database (not implemented yet)
+    // TODO: Implement database clear method in DatabaseService
+
+    // Import the data
+    const result = db.importData(importData.data);
+
+    return {
+      success: true,
+      path: filePaths[0],
+      stats: {
+        flashcardsImported: result.flashcardsImported,
+        sessionsImported: result.sessionsImported,
+        settingsImported: result.settingsImported
+      },
+      importInfo: {
+        version: importData.version || 'unknown',
+        exportDate: importData.exportDate || 'unknown',
+        appInfo: importData.appInfo || { name: 'unknown', version: 'unknown' }
+      }
+    };
   } catch (error) {
     console.error('Error importing database:', error);
     throw error;
