@@ -4,7 +4,7 @@
   "description": "A desktop application for language learning using a flashcard system",
   "main": "electron-main.js",
   "scripts": {
-    "dev": "concurrently \"vite\" \"electron electron-main.js\"",
+    "dev": "concurrently \"vite\" \"electron electron-dev.js\"",
     "build": "tsc && vite build",
     "package": "npm run build && electron-builder",
     "lint": "eslint src --ext ts,tsx",
