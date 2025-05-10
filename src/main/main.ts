@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'path';
 import { DatabaseService } from '@/services/DatabaseService';
+import { setupDatabase } from './setupDatabase';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (require('electron-squirrel-startup')) {
@@ -36,6 +37,9 @@ const createWindow = () => {
     // In production, load from built files
     mainWindow.loadFile(path.join(__dirname, '../../index.html'));
   }
+
+  // Initialize database and add sample data if needed
+  setupDatabase();
 
   // Initialize database service
   databaseService = new DatabaseService();
