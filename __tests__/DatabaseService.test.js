@@ -1,3 +1,14 @@
+/**
+ * Tests for DatabaseService
+ *
+ * Note on mocking strategy:
+ * - We use jest.mock to mock the better-sqlite3 module
+ * - Mock data is stored in Maps (mockFlashcards, mockSessions) and variables (mockSettings)
+ * - A resetMockData function ensures each test starts with a clean state
+ * - The mock implements basic SQL-like filtering for queries with WHERE clauses
+ * - Each test case should be isolated from others, with no state leakage
+ */
+
 const DatabaseService = require('../src/services/DatabaseService');
 const FlashCard = require('../src/models/FlashCard');
 const Session = require('../src/models/Session');
@@ -5,10 +16,20 @@ const Settings = require('../src/models/Settings');
 
 // Mock better-sqlite3
 jest.mock('better-sqlite3', () => {
-  // Create mock data stores
-  const mockFlashcards = new Map();
-  const mockSessions = new Map();
-  let mockSettings = null;
+  // Create mock data stores that will be reset for each test
+  let mockFlashcards;
+  let mockSessions;
+  let mockSettings;
+
+  // Reset function to clear all mock data
+  const resetMockData = () => {
+    mockFlashcards = new Map();
+    mockSessions = new Map();
+    mockSettings = null;
+  };
+
+  // Initialize mock data
+  resetMockData();
 
   // Mock for prepare method with specific behaviors
   const mockPrepare = jest.fn().mockImplementation((query) => {
@@ -30,7 +51,36 @@ jest.mock('better-sqlite3', () => {
     }
     if (query.includes('SELECT * FROM flashcards')) {
       return {
-        all: jest.fn().mockImplementation(() => Array.from(mockFlashcards.values()))
+        all: jest.fn().mockImplementation((...params) => {
+          let result = Array.from(mockFlashcards.values());
+
+          // Handle WHERE clauses for filtering
+          if (query.includes('WHERE')) {
+            // sourceLanguage filter
+            if (query.includes('sourceLanguage = ?') && params.length > 0) {
+              const language = params[0];
+              result = result.filter(card => card.sourceLanguage === language);
+            }
+
+            // tag filter
+            if (query.includes('tags LIKE ?')) {
+              const tagParam = params.find(p => typeof p === 'string' && p.includes('%"'));
+              if (tagParam) {
+                const tag = tagParam.replace(/^%"|"%$/g, '');
+                result = result.filter(card => {
+                  try {
+                    const tags = JSON.parse(card.tags || '[]');
+                    return tags.includes(tag);
+                  } catch {
+                    return false;
+                  }
+                });
+              }
+            }
+          }
+
+          return result;
+        })
       };
     }
     if (query.includes('DELETE FROM flashcards WHERE id = ?')) {
@@ -60,7 +110,24 @@ jest.mock('better-sqlite3', () => {
     }
     if (query.includes('SELECT * FROM sessions')) {
       return {
-        all: jest.fn().mockImplementation(() => Array.from(mockSessions.values()))
+        all: jest.fn().mockImplementation((...params) => {
+          let result = Array.from(mockSessions.values());
+
+          // Handle WHERE clauses for filtering
+          if (query.includes('WHERE')) {
+            // Active sessions filter
+            if (query.includes('completedAt IS NULL')) {
+              result = result.filter(session => !session.completedAt);
+            }
+
+            // Completed sessions filter
+            if (query.includes('completedAt IS NOT NULL')) {
+              result = result.filter(session => session.completedAt);
+            }
+          }
+
+          return result;
+        })
       };
     }
     if (query.includes('DELETE FROM sessions WHERE id = ?')) {
@@ -124,7 +191,10 @@ jest.mock('better-sqlite3', () => {
     pragma: jest.fn()
   };
 
-  return jest.fn(() => mockDb);
+  const mockBetterSqlite3 = jest.fn(() => mockDb);
+  // Expose the reset function for tests
+  mockBetterSqlite3.resetMockData = resetMockData;
+  return mockBetterSqlite3;
 });
 
 // Mock electron app
@@ -138,6 +208,9 @@ describe('DatabaseService', () => {
   let db;
 
   beforeEach(async () => {
+    // Reset the mock data
+    require('better-sqlite3').resetMockData();
+
     // Create a new in-memory database for each test
     db = new DatabaseService({ inMemory: true });
     await db.initialize();
@@ -457,6 +530,9 @@ describe('DatabaseService', () => {
     });
 
     it('returns default settings when none exists', () => {
+      // Reset mock data to ensure no settings exist
+      require('better-sqlite3').resetMockData();
+
       // Get settings without saving any
       const settings = db.getSettings();
 
