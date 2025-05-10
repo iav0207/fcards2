@@ -53,11 +53,17 @@ class SessionService {
       }
     } else {
       // Get cards from database
+      console.log(`Fetching cards for session: sourceLanguage=${sourceLanguage}, limit=${maxCards}`);
       const cards = await this.db.getAllFlashCards({
         sourceLanguage,
         limit: maxCards
       });
-      
+
+      console.log(`Found ${cards.length} cards in database for sourceLanguage=${sourceLanguage}`);
+      if (cards.length > 0) {
+        console.log('First card:', cards[0].toJSON());
+      }
+
       cardIds = cards.map(card => card.id);
     }
     
