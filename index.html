@@ -14,19 +14,27 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      height: 100vh;
+      justify-content: flex-start;
+      min-height: 100vh;
     }
-
+    
     h1 {
       margin-bottom: 10px;
       color: #90caf9;
     }
-
+    
     p {
       margin-bottom: 20px;
       text-align: center;
       max-width: 600px;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 800px;
     }
 
     .info-container {
@@ -34,8 +42,7 @@
       border-radius: 8px;
       padding: 20px;
       margin-top: 20px;
-      width: 80%;
-      max-width: 500px;
+      width: 100%;
     }
 
     .info-item {
@@ -71,63 +78,321 @@
       background-color: #64b5f6;
     }
 
+    button:disabled {
+      background-color: #555;
+      cursor: not-allowed;
+    }
+
     .button-container {
       display: flex;
       gap: 10px;
       margin-top: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .screen {
+      display: none;
+      width: 100%;
+    }
+
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .card {
+      background-color: #1e1e1e;
+      border-radius: 8px;
+      padding: 30px;
+      margin-top: 20px;
+      width: 100%;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    .card-content {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background-color: #333;
+      border-radius: 4px;
+      margin: 20px 0;
+      overflow: hidden;
+    }
+
+    .progress-value {
+      height: 100%;
+      background-color: #90caf9;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .feedback {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .feedback.correct {
+      background-color: rgba(76, 175, 80, 0.2);
+      color: #81c784;
+    }
+    
+    .feedback.incorrect {
+      background-color: rgba(244, 67, 54, 0.2);
+      color: #e57373;
+    }
+
+    .session-stats {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+
+    .stats-item {
+      flex: 1;
+      min-width: 120px;
+      text-align: center;
+      margin: 10px;
+    }
+
+    .stats-value {
+      font-size: 32px;
+      font-weight: bold;
+      color: #90caf9;
+    }
+
+    .stats-label {
+      font-size: 14px;
+      color: #bbb;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      width: 100%;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #90caf9;
+    }
+
+    .form-group select, .form-group input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #333;
+      background-color: #2c2c2c;
+      color: white;
+      font-size: 16px;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #333;
+      background-color: #2c2c2c;
+      color: white;
+      font-size: 16px;
+      resize: vertical;
+      min-height: 100px;
+      margin-bottom: 20px;
     }
   </style>
 </head>
 <body>
-  <h1>FlashCards Desktop</h1>
-  <p>A language learning application to create and practice flashcards</p>
+  <div class="container">
+    <h1>FlashCards Desktop</h1>
+    <p>A language learning application to create and practice flashcards</p>
+    
+    <!-- Home Screen -->
+    <div id="home-screen" class="screen active">
+      <div class="info-container">
+        <h2>Database Information</h2>
+        <div id="db-stats">
+          <div class="info-item">
+            <span class="info-label">FlashCards:</span>
+            <span class="info-value" id="flashcards-count">Loading...</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Practice Sessions:</span>
+            <span class="info-value" id="sessions-count">Loading...</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Active Sessions:</span>
+            <span class="info-value" id="active-sessions-count">Loading...</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Completed Sessions:</span>
+            <span class="info-value" id="completed-sessions-count">Loading...</span>
+          </div>
+        </div>
+      </div>
 
-  <div class="info-container">
-    <h2>Database Information</h2>
-    <div id="db-stats">
-      <div class="info-item">
-        <span class="info-label">FlashCards:</span>
-        <span class="info-value" id="flashcards-count">Loading...</span>
+      <div class="info-container">
+        <h2>App Information</h2>
+        <div id="version-info">
+          <div class="info-item">
+            <span class="info-label">Node.js Version:</span>
+            <span class="info-value" id="node-version">Loading...</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Chromium Version:</span>
+            <span class="info-value" id="chrome-version">Loading...</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Electron Version:</span>
+            <span class="info-value" id="electron-version">Loading...</span>
+          </div>
+        </div>
       </div>
-      <div class="info-item">
-        <span class="info-label">Practice Sessions:</span>
-        <span class="info-value" id="sessions-count">Loading...</span>
-      </div>
-      <div class="info-item">
-        <span class="info-label">Active Sessions:</span>
-        <span class="info-value" id="active-sessions-count">Loading...</span>
-      </div>
-      <div class="info-item">
-        <span class="info-label">Completed Sessions:</span>
-        <span class="info-value" id="completed-sessions-count">Loading...</span>
+
+      <div class="button-container">
+        <button id="refresh-stats">Refresh Stats</button>
+        <button id="create-sample-card">Create Sample Card</button>
+        <button id="start-practice-btn">Start Practice Session</button>
       </div>
     </div>
-  </div>
 
-  <div class="info-container">
-    <h2>App Information</h2>
-    <div id="version-info">
-      <div class="info-item">
-        <span class="info-label">Node.js Version:</span>
-        <span class="info-value" id="node-version">Loading...</span>
+    <!-- Session Setup Screen -->
+    <div id="setup-screen" class="screen">
+      <div class="info-container">
+        <h2>Practice Session Setup</h2>
+        <div class="form-group">
+          <label for="source-language">Source Language:</label>
+          <select id="source-language">
+            <option value="en">English</option>
+            <option value="de">German</option>
+            <option value="fr">French</option>
+            <option value="es">Spanish</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="target-language">Target Language:</label>
+          <select id="target-language">
+            <option value="de">German</option>
+            <option value="en">English</option>
+            <option value="fr">French</option>
+            <option value="es">Spanish</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="card-count">Number of Cards:</label>
+          <input type="number" id="card-count" min="5" max="20" value="10">
+        </div>
       </div>
-      <div class="info-item">
-        <span class="info-label">Chromium Version:</span>
-        <span class="info-value" id="chrome-version">Loading...</span>
-      </div>
-      <div class="info-item">
-        <span class="info-label">Electron Version:</span>
-        <span class="info-value" id="electron-version">Loading...</span>
+      <div class="button-container">
+        <button id="back-to-home-btn">Back</button>
+        <button id="create-session-btn">Start Session</button>
       </div>
     </div>
-  </div>
 
-  <div class="button-container">
-    <button id="refresh-stats">Refresh Stats</button>
-    <button id="create-sample-card">Create Sample Card</button>
+    <!-- Practice Screen -->
+    <div id="practice-screen" class="screen">
+      <div class="progress-bar">
+        <div class="progress-value" id="session-progress"></div>
+      </div>
+      <div class="card">
+        <div class="card-content" id="card-content"></div>
+      </div>
+      <div class="form-group">
+        <label for="translation-input">Your Translation:</label>
+        <textarea id="translation-input" placeholder="Type your translation here..."></textarea>
+      </div>
+      <div class="button-container">
+        <button id="submit-answer-btn">Submit Answer</button>
+      </div>
+    </div>
+
+    <!-- Feedback Screen -->
+    <div id="feedback-screen" class="screen">
+      <div class="progress-bar">
+        <div class="progress-value" id="feedback-progress"></div>
+      </div>
+      <div class="card">
+        <div class="card-content" id="feedback-original"></div>
+      </div>
+      <div id="feedback-result" class="feedback"></div>
+      <div class="info-container">
+        <div class="info-item">
+          <span class="info-label">Your Translation:</span>
+          <span class="info-value" id="feedback-user-answer"></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Suggested Translation:</span>
+          <span class="info-value" id="feedback-suggested"></span>
+        </div>
+      </div>
+      <div class="button-container">
+        <button id="next-card-btn">Next Card</button>
+      </div>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="results-screen" class="screen">
+      <div class="info-container">
+        <h2>Session Results</h2>
+        <div class="session-stats">
+          <div class="stats-item">
+            <div class="stats-value" id="results-total">0</div>
+            <div class="stats-label">Total Cards</div>
+          </div>
+          <div class="stats-item">
+            <div class="stats-value" id="results-correct">0</div>
+            <div class="stats-label">Correct</div>
+          </div>
+          <div class="stats-item">
+            <div class="stats-value" id="results-accuracy">0%</div>
+            <div class="stats-label">Accuracy</div>
+          </div>
+        </div>
+      </div>
+      <div class="button-container">
+        <button id="back-to-home-from-results-btn">Back to Home</button>
+        <button id="start-new-session-btn">Start New Session</button>
+      </div>
+    </div>
   </div>
 
   <script>
+    // State management
+    const state = {
+      sessionId: null,
+      currentCard: null,
+      lastAnswer: null,
+      lastEvaluation: null
+    };
+
+    // Screen management
+    const screens = {
+      home: document.getElementById('home-screen'),
+      setup: document.getElementById('setup-screen'),
+      practice: document.getElementById('practice-screen'),
+      feedback: document.getElementById('feedback-screen'),
+      results: document.getElementById('results-screen')
+    };
+
+    function showScreen(screenName) {
+      // Hide all screens
+      Object.values(screens).forEach(screen => {
+        screen.classList.remove('active');
+      });
+      
+      // Show the requested screen
+      screens[screenName].classList.add('active');
+    }
+
     // Display version information
     document.getElementById('node-version').textContent = window.versions.node();
     document.getElementById('chrome-version').textContent = window.versions.chrome();
@@ -159,7 +424,7 @@
 
         const savedCard = await window.flashcards.saveFlashCard(sampleCard);
         console.log('Sample card created:', savedCard);
-
+        
         // Refresh stats after creating a card
         await loadDatabaseStats();
 
@@ -170,12 +435,181 @@
       }
     }
 
+    // Create and start a practice session
+    async function createSession() {
+      try {
+        const sourceLanguage = document.getElementById('source-language').value;
+        const targetLanguage = document.getElementById('target-language').value;
+        const maxCards = parseInt(document.getElementById('card-count').value, 10);
+        
+        if (sourceLanguage === targetLanguage) {
+          alert('Source and target languages must be different!');
+          return;
+        }
+        
+        const sessionData = await window.flashcards.createGameSession({
+          sourceLanguage,
+          targetLanguage,
+          maxCards,
+          useSampleCards: true
+        });
+        
+        state.sessionId = sessionData.id;
+        console.log('Created session:', sessionData);
+        
+        // Load the first card
+        await loadCurrentCard();
+        
+        // Show practice screen
+        showScreen('practice');
+      } catch (error) {
+        console.error('Error creating session:', error);
+        alert('Error creating session: ' + error.message);
+      }
+    }
+
+    // Load the current card in the session
+    async function loadCurrentCard() {
+      try {
+        const cardData = await window.flashcards.getCurrentCard(state.sessionId);
+        
+        if (!cardData) {
+          // Session is complete
+          showResults();
+          return;
+        }
+        
+        state.currentCard = cardData;
+        
+        // Update UI
+        document.getElementById('card-content').textContent = cardData.card.content;
+        
+        // Update progress
+        const progressPercent = (cardData.sessionProgress.current / cardData.sessionProgress.total) * 100;
+        document.getElementById('session-progress').style.width = `${progressPercent}%`;
+        
+        // Clear the input
+        document.getElementById('translation-input').value = '';
+      } catch (error) {
+        console.error('Error loading current card:', error);
+        alert('Error loading card: ' + error.message);
+      }
+    }
+
+    // Submit an answer for evaluation
+    async function submitAnswer() {
+      try {
+        const answer = document.getElementById('translation-input').value.trim();
+        
+        if (!answer) {
+          alert('Please enter a translation!');
+          return;
+        }
+        
+        const result = await window.flashcards.submitAnswer(state.sessionId, answer);
+        
+        state.lastAnswer = answer;
+        state.lastEvaluation = result;
+        
+        showFeedback(result);
+      } catch (error) {
+        console.error('Error submitting answer:', error);
+        alert('Error submitting answer: ' + error.message);
+      }
+    }
+
+    // Show feedback for the submitted answer
+    function showFeedback(result) {
+      // Update progress in the feedback screen
+      const progressPercent = (state.currentCard.sessionProgress.current / state.currentCard.sessionProgress.total) * 100;
+      document.getElementById('feedback-progress').style.width = `${progressPercent}%`;
+      
+      // Show the original text
+      document.getElementById('feedback-original').textContent = state.currentCard.card.content;
+      
+      // Show the user's answer
+      document.getElementById('feedback-user-answer').textContent = state.lastAnswer;
+      
+      // Show the suggested translation
+      document.getElementById('feedback-suggested').textContent = result.referenceTranslation;
+      
+      // Show the feedback message
+      const feedbackElement = document.getElementById('feedback-result');
+      feedbackElement.textContent = result.evaluation.feedback;
+      
+      if (result.evaluation.correct) {
+        feedbackElement.classList.add('correct');
+        feedbackElement.classList.remove('incorrect');
+      } else {
+        feedbackElement.classList.add('incorrect');
+        feedbackElement.classList.remove('correct');
+      }
+      
+      // Show the feedback screen
+      showScreen('feedback');
+    }
+
+    // Advance to the next card
+    async function nextCard() {
+      try {
+        const result = await window.flashcards.advanceSession(state.sessionId);
+        
+        if (result.isComplete) {
+          // Session is complete, show results
+          showResults();
+        } else {
+          // Load the next card
+          await loadCurrentCard();
+          showScreen('practice');
+        }
+      } catch (error) {
+        console.error('Error advancing session:', error);
+        alert('Error advancing to next card: ' + error.message);
+      }
+    }
+
+    // Show the results screen
+    async function showResults() {
+      try {
+        const stats = await window.flashcards.getSessionStats(state.sessionId);
+        
+        // Update results UI
+        document.getElementById('results-total').textContent = stats.stats.totalCards;
+        document.getElementById('results-correct').textContent = stats.stats.correctCards;
+        document.getElementById('results-accuracy').textContent = Math.round(stats.stats.accuracy) + '%';
+        
+        // Show the results screen
+        showScreen('results');
+        
+        // Refresh database stats
+        await loadDatabaseStats();
+      } catch (error) {
+        console.error('Error showing results:', error);
+        alert('Error showing results: ' + error.message);
+      }
+    }
+
     // Initial load
     loadDatabaseStats();
 
-    // Button event listeners
+    // Button event listeners - Home Screen
     document.getElementById('refresh-stats').addEventListener('click', loadDatabaseStats);
     document.getElementById('create-sample-card').addEventListener('click', createSampleCard);
+    document.getElementById('start-practice-btn').addEventListener('click', () => showScreen('setup'));
+    
+    // Setup Screen
+    document.getElementById('back-to-home-btn').addEventListener('click', () => showScreen('home'));
+    document.getElementById('create-session-btn').addEventListener('click', createSession);
+    
+    // Practice Screen
+    document.getElementById('submit-answer-btn').addEventListener('click', submitAnswer);
+    
+    // Feedback Screen
+    document.getElementById('next-card-btn').addEventListener('click', nextCard);
+    
+    // Results Screen
+    document.getElementById('back-to-home-from-results-btn').addEventListener('click', () => showScreen('home'));
+    document.getElementById('start-new-session-btn').addEventListener('click', () => showScreen('setup'));
   </script>
 </body>
 </html>
