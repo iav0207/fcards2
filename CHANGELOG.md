@@ -19,15 +19,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implemented "Select All" and "Deselect All" functionality
   - Added automatic hiding of tag selection UI when only one tag is available
   - Added comprehensive tests for tag-based deck selection
+  - Implemented accessible tag selection UI with keyboard navigation and screen reader support
+  - Added visual indicators for selection state to improve usability for users with color blindness
 
 ### Changed
 - Enhanced SessionService.createSession to support tag filtering options
 - Improved DatabaseService with efficient tag retrieval and filtering
 - Added error handling with notification system for tag operations
 - Updated IPC handlers to support tag operations
+- Enhanced tag selection UI with ARIA attributes and improved keyboard navigation
+- Added focus management for better accessibility
 
 ### Fixed
 - Proper handling of empty tag arrays and null tags in database queries
+- Fixed getAvailableTags to properly handle undefined source language parameter
 
 ## [0.2.0] - 2025-05-11
 

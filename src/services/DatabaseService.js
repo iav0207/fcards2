@@ -482,6 +482,14 @@ class DatabaseService {
       throw new Error('Database not initialized');
     }
 
+    // If no source language is provided, return empty result
+    if (!sourceLanguage) {
+      return {
+        tags: [],
+        untaggedCount: 0
+      };
+    }
+
     // First get all cards for this language
     const allCards = this.getAllFlashCards({ sourceLanguage });
 

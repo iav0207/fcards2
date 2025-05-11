@@ -319,61 +319,149 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px;
+      padding: 10px 15px;
       background-color: #2c2c2c;
       border-radius: 4px;
       cursor: pointer;
-      margin-bottom: 5px;
+      margin-bottom: 0;
+      color: white;
+      border: 2px solid transparent;
+      transition: all 0.2s ease;
+      text-align: left;
+      width: 100%;
+    }
+
+    .tag-selection-header:hover {
+      background-color: #333;
+    }
+
+    .tag-selection-header:focus {
+      outline: none;
+      border-color: #90caf9;
+      box-shadow: 0 0 0 2px rgba(144, 202, 249, 0.5);
+    }
+
+    .tag-selection-summary {
+      font-size: 0.9em;
+      color: #bbb;
+      margin-left: 10px;
     }
 
     .tag-selection-content {
-      padding: 10px;
+      padding: 15px;
       background-color: #1e1e1e;
-      border-radius: 4px;
+      border-radius: 0 0 4px 4px;
       display: none;
-      max-height: 200px;
+      max-height: 250px;
       overflow-y: auto;
+      border: 1px solid #333;
+      border-top: none;
     }
 
     .tag-selection-content.open {
       display: block;
     }
 
-    .tag-checkbox {
+    .tag-cloud {
       display: flex;
-      align-items: center;
-      margin-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
     }
 
-    .tag-checkbox input {
-      margin-right: 8px;
+    .tag-toggle {
+      background-color: #2c2c2c;
+      border: 1px solid #444;
+      color: white;
+      padding: 6px 12px;
+      padding-left: 24px;  /* Space for the selection indicator */
+      border-radius: 15px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .tag-toggle::before {
+      content: '';
+      position: absolute;
+      left: 8px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid #666;
+      transition: all 0.2s ease;
+    }
+
+    .tag-toggle:hover {
+      background-color: #333;
+    }
+
+    .tag-toggle:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(144, 202, 249, 0.5);
+    }
+
+    .tag-toggle.selected {
+      background-color: #1e3a5a;
+      border-color: #90caf9;
+      color: #90caf9;
+    }
+
+    .tag-toggle.selected::before {
+      background-color: #90caf9;
+      border-color: #90caf9;
     }
 
     .tag-count {
       color: #90caf9;
       margin-left: 5px;
       font-size: 0.8em;
+      opacity: 0.8;
     }
 
     .tag-selection-actions {
       display: flex;
       justify-content: flex-end;
-      margin-top: 10px;
-      gap: 10px;
+      margin-top: 15px;
+      gap: 12px;
+      border-top: 1px solid #333;
+      padding-top: 15px;
     }
 
     .tag-action-btn {
       background-color: #2c2c2c;
-      border: none;
+      border: 1px solid #444;
       color: white;
-      padding: 5px 10px;
+      padding: 6px 12px;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 12px;
+      font-size: 13px;
+      transition: all 0.2s ease;
     }
 
     .tag-action-btn:hover {
       background-color: #333;
+    }
+
+    .tag-action-btn:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(144, 202, 249, 0.5);
+    }
+
+    /* Screen reader only text */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
     }
   </style>
 </head>
@@ -472,29 +560,60 @@
           <input type="number" id="card-count" min="5" max="20" value="10">
         </div>
 
-        <!-- Tag Selection Accordion -->
+        <!-- Tag Selection Component -->
         <div id="tag-selection-container" class="tag-selection-container" style="display: none;">
-          <div class="tag-selection-header" id="tag-selection-header">
+          <button
+            class="tag-selection-header"
+            id="tag-selection-header"
+            aria-expanded="false"
+            aria-controls="tag-selection-content"
+            aria-haspopup="true">
             <span>Select Tags</span>
-            <span id="tag-selection-toggle">▼</span>
-          </div>
-          <div class="tag-selection-content" id="tag-selection-content">
-            <!-- Tags will be dynamically added here -->
-            <div id="tag-checkboxes-container">
+            <span id="tag-selection-summary" class="tag-selection-summary" aria-live="polite">All tags selected</span>
+            <span id="tag-selection-toggle" aria-hidden="true">▼</span>
+          </button>
+          <div
+            class="tag-selection-content"
+            id="tag-selection-content"
+            role="region"
+            aria-labelledby="tag-selection-header">
+
+            <!-- Selection status announced to screen readers but visually hidden -->
+            <div class="sr-only" aria-live="polite" id="tag-selection-status"></div>
+
+            <!-- Tag Cloud will be dynamically added here -->
+            <div id="tag-cloud" class="tag-cloud" role="group" aria-label="Available tags">
               <div class="tag-loading">Loading tags...</div>
             </div>
 
-            <!-- Untagged option -->
-            <div class="tag-checkbox">
-              <input type="checkbox" id="include-untagged" checked>
-              <label for="include-untagged">Include untagged cards</label>
+            <!-- Untagged option as a button -->
+            <button
+              type="button"
+              id="include-untagged"
+              class="tag-toggle selected"
+              aria-pressed="true"
+              aria-describedby="untagged-desc">
+              <span>Untagged cards</span>
               <span class="tag-count" id="untagged-count">(0)</span>
-            </div>
+              <span id="untagged-desc" class="sr-only">Toggle selection of cards without tags</span>
+            </button>
 
             <!-- Actions -->
             <div class="tag-selection-actions">
-              <button class="tag-action-btn" id="select-all-tags">Select All</button>
-              <button class="tag-action-btn" id="deselect-all-tags">Deselect All</button>
+              <button
+                type="button"
+                class="tag-action-btn"
+                id="select-all-tags"
+                aria-controls="tag-cloud include-untagged">
+                Select All
+              </button>
+              <button
+                type="button"
+                class="tag-action-btn"
+                id="deselect-all-tags"
+                aria-controls="tag-cloud include-untagged">
+                Deselect All
+              </button>
             </div>
           </div>
         </div>
@@ -694,11 +813,13 @@
     async function loadTagsForSelection(sourceLanguage) {
       try {
         const tagSelectionContainer = document.getElementById('tag-selection-container');
-        const tagCheckboxesContainer = document.getElementById('tag-checkboxes-container');
+        const tagCloudContainer = document.getElementById('tag-cloud');
         const untaggedCountElement = document.getElementById('untagged-count');
+        const tagSummaryElement = document.getElementById('tag-selection-summary');
+        const tagStatusElement = document.getElementById('tag-selection-status');
 
         // Show loading
-        tagCheckboxesContainer.innerHTML = '<div class="tag-loading">Loading tags...</div>';
+        tagCloudContainer.innerHTML = '<div class="tag-loading">Loading tags...</div>';
 
         // Fetch tags for the selected source language
         const tagsData = await window.flashcards.getAvailableTags(sourceLanguage);
@@ -717,42 +838,177 @@
         // Update untagged count
         untaggedCountElement.textContent = `(${tagsData.untaggedCount})`;
 
-        // Create checkboxes for each tag
-        let checkboxesHTML = '';
+        // Create tag buttons for each tag
+        let tagsHTML = '';
         if (tagsData.tags.length === 0) {
-          checkboxesHTML = '<div class="no-tags-message">No tags available</div>';
+          tagsHTML = '<div class="no-tags-message" role="status">No tags available</div>';
         } else {
-          tagsData.tags.forEach(tagData => {
-            checkboxesHTML += `
-              <div class="tag-checkbox">
-                <input type="checkbox" id="tag-${tagData.tag}" class="tag-checkbox-input" data-tag="${tagData.tag}" checked>
-                <label for="tag-${tagData.tag}">${tagData.tag}</label>
+          tagsData.tags.forEach((tagData, index) => {
+            tagsHTML += `
+              <button
+                type="button"
+                id="tag-${tagData.tag}"
+                class="tag-toggle selected"
+                data-tag="${tagData.tag}"
+                aria-pressed="true"
+                aria-describedby="tag-desc-${tagData.tag}"
+                tabindex="0">
+                <span>${tagData.tag}</span>
                 <span class="tag-count">(${tagData.count})</span>
-              </div>
+                <span id="tag-desc-${tagData.tag}" class="sr-only">Toggle selection of tag ${tagData.tag} with ${tagData.count} cards</span>
+              </button>
             `;
           });
         }
 
         // Update the container
-        tagCheckboxesContainer.innerHTML = checkboxesHTML;
+        tagCloudContainer.innerHTML = tagsHTML;
+
+        // Update summary text
+        const totalTagCount = tagsData.tags.length + (tagsData.untaggedCount > 0 ? 1 : 0);
+        tagSummaryElement.textContent = `All ${totalTagCount} tags selected`;
+
+        // Update screen reader status
+        tagStatusElement.textContent = `Loaded ${tagsData.tags.length} tags. All ${totalTagCount} tags are currently selected.`;
 
         // Show tag selection only if there's more than one tag or if there are both tagged and untagged cards
         const hasMultipleTagOptions = tagsData.tags.length > 1 || (tagsData.tags.length === 1 && tagsData.untaggedCount > 0);
 
         if (!hasMultipleTagOptions) {
-          // Just one tag option (or only untagged cards), hide the accordion
+          // Just one tag option (or only untagged cards), hide the container
           tagSelectionContainer.style.display = 'none';
+        }
+
+        // Add event listeners to the tag buttons
+        document.querySelectorAll('.tag-toggle').forEach(button => {
+          // Click event
+          button.addEventListener('click', () => {
+            toggleTagSelection(button);
+          });
+
+          // Keyboard event handling
+          button.addEventListener('keydown', (event) => {
+            // Toggle on Enter or Space
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              toggleTagSelection(button);
+            }
+
+            // Arrow key navigation between tags
+            else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+              event.preventDefault();
+              const nextButton = findNextFocusableElement(button, true);
+              if (nextButton) nextButton.focus();
+            }
+            else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+              event.preventDefault();
+              const prevButton = findNextFocusableElement(button, false);
+              if (prevButton) prevButton.focus();
+            }
+            else if (event.key === 'Home') {
+              event.preventDefault();
+              const firstButton = document.querySelector('.tag-toggle');
+              if (firstButton) firstButton.focus();
+            }
+            else if (event.key === 'End') {
+              event.preventDefault();
+              const allButtons = document.querySelectorAll('.tag-toggle');
+              const lastButton = allButtons[allButtons.length - 1];
+              if (lastButton) lastButton.focus();
+            }
+            else if (event.key === 'Escape') {
+              event.preventDefault();
+              // Close the tag selection panel and move focus back to header
+              const header = document.getElementById('tag-selection-header');
+              toggleTagSelectionAccordion();
+              if (header) header.focus();
+            }
+          });
+        });
+
+        // Helper function to find the next focusable element
+        function findNextFocusableElement(currentElement, forward = true) {
+          const focusableElements = Array.from(
+            document.querySelectorAll('.tag-toggle, .tag-action-btn')
+          );
+
+          const currentIndex = focusableElements.indexOf(currentElement);
+
+          if (currentIndex === -1) return null;
+
+          let nextIndex;
+          if (forward) {
+            nextIndex = (currentIndex + 1) % focusableElements.length;
+          } else {
+            nextIndex = (currentIndex - 1 + focusableElements.length) % focusableElements.length;
+          }
+
+          return focusableElements[nextIndex];
         }
       } catch (error) {
         console.error('Error loading tags:', error);
-        const tagCheckboxesContainer = document.getElementById('tag-checkboxes-container');
-        tagCheckboxesContainer.innerHTML = '<div class="error-message">Failed to load tags. Please try again.</div>';
+        const tagCloudContainer = document.getElementById('tag-cloud');
+        tagCloudContainer.innerHTML = '<div class="error-message" role="alert">Failed to load tags. Please try again.</div>';
 
         notificationSystem.error(
           'Tag Loading Failed',
           'Failed to load available tags',
           error.message
         );
+      }
+    }
+
+    // Toggle tag selection and update status
+    function toggleTagSelection(button) {
+      const isSelected = button.classList.contains('selected');
+      const newState = !isSelected;
+      const tagName = button.dataset.tag || (button.id === 'include-untagged' ? 'untagged cards' : button.textContent.trim());
+
+      // Update button state
+      button.classList.toggle('selected', newState);
+      button.setAttribute('aria-pressed', newState.toString());
+
+      // Announce to screen readers
+      const statusMessage = newState ?
+        `Selected ${tagName}` :
+        `Deselected ${tagName}`;
+      document.getElementById('tag-selection-status').textContent = statusMessage;
+
+      // Update summary text in the dropdown header
+      updateTagSelectionSummary();
+    }
+
+    // Update the tag selection summary text
+    function updateTagSelectionSummary() {
+      const totalTagButtons = document.querySelectorAll('.tag-toggle').length;
+      const selectedTagButtons = document.querySelectorAll('.tag-toggle.selected').length;
+      const tagSummaryElement = document.getElementById('tag-selection-summary');
+      const tagStatusElement = document.getElementById('tag-selection-status');
+
+      let summaryText = '';
+      if (selectedTagButtons === 0) {
+        summaryText = 'No tags selected';
+      } else if (selectedTagButtons === totalTagButtons) {
+        summaryText = `All ${totalTagButtons} tags selected`;
+      } else {
+        summaryText = `${selectedTagButtons} of ${totalTagButtons} tags selected`;
+      }
+
+      tagSummaryElement.textContent = summaryText;
+
+      // Update screen reader status with more detailed information
+      const selectedTags = Array.from(document.querySelectorAll('.tag-toggle.selected'))
+        .map(button => button.dataset.tag || (button.id === 'include-untagged' ? 'untagged cards' : ''))
+        .filter(tag => tag);
+
+      let statusMessage = summaryText;
+      if (selectedTags.length > 0 && selectedTags.length <= 5) {
+        statusMessage += `. Selected tags: ${selectedTags.join(', ')}`;
+      }
+
+      // Only update the tag status if it's different to avoid repeated announcements
+      if (tagStatusElement.textContent !== statusMessage) {
+        tagStatusElement.textContent = statusMessage;
       }
     }
 
@@ -798,12 +1054,14 @@
         let includeUntagged = false;
 
         if (tagSelectionContainer.style.display !== 'none') {
-          // Get all checked tag checkboxes
-          const tagCheckboxes = document.querySelectorAll('.tag-checkbox-input:checked');
-          selectedTags = Array.from(tagCheckboxes).map(checkbox => checkbox.dataset.tag);
+          // Get all selected tag buttons
+          const tagButtons = document.querySelectorAll('.tag-toggle.selected');
+          selectedTags = Array.from(tagButtons)
+            .filter(button => button.id !== 'include-untagged')
+            .map(button => button.dataset.tag);
 
           // Check if untagged cards should be included
-          includeUntagged = document.getElementById('include-untagged').checked;
+          includeUntagged = document.getElementById('include-untagged').classList.contains('selected');
         }
 
         console.log('Selected tags:', selectedTags);
@@ -1249,34 +1507,92 @@
       loadTagsForSelection(event.target.value);
     });
 
-    // Tag selection accordion
+    // Tag selection accordion - properly accessible with keyboard
     document.getElementById('tag-selection-header').addEventListener('click', () => {
-      const content = document.getElementById('tag-selection-content');
-      const toggle = document.getElementById('tag-selection-toggle');
+      toggleTagSelectionAccordion();
+    });
 
-      if (content.classList.contains('open')) {
-        content.classList.remove('open');
-        toggle.textContent = '▼';
-      } else {
-        content.classList.add('open');
-        toggle.textContent = '▲';
+    // Support keyboard activation for accordion header
+    document.getElementById('tag-selection-header').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault(); // Prevent scrolling on Space
+        toggleTagSelectionAccordion();
       }
     });
 
+    // Toggle the tag selection accordion open/closed
+    function toggleTagSelectionAccordion() {
+      const header = document.getElementById('tag-selection-header');
+      const content = document.getElementById('tag-selection-content');
+      const toggle = document.getElementById('tag-selection-toggle');
+      const isExpanded = content.classList.contains('open');
+      const newState = !isExpanded;
+
+      // Toggle expanded state
+      content.classList.toggle('open', newState);
+
+      // Update ARIA attributes and visual indicator
+      header.setAttribute('aria-expanded', newState);
+      toggle.textContent = newState ? '▲' : '▼';
+
+      // Announce state change to screen readers
+      document.getElementById('tag-selection-status').textContent =
+        newState ? 'Tag selection expanded' : 'Tag selection collapsed';
+
+      // If opening, focus the first tag button or action button
+      if (newState) {
+        const firstButton = content.querySelector('.tag-toggle') ||
+                           content.querySelector('.tag-action-btn');
+        if (firstButton) {
+          setTimeout(() => firstButton.focus(), 50);
+        }
+      }
+    }
+
     // Tag selection actions
     document.getElementById('select-all-tags').addEventListener('click', () => {
-      const tagCheckboxes = document.querySelectorAll('.tag-checkbox-input');
-      tagCheckboxes.forEach(checkbox => {
-        checkbox.checked = true;
-      });
+      selectAllTags(true);
+    });
+
+    document.getElementById('select-all-tags').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault(); // Prevent scrolling on Space
+        selectAllTags(true);
+      }
     });
 
     document.getElementById('deselect-all-tags').addEventListener('click', () => {
-      const tagCheckboxes = document.querySelectorAll('.tag-checkbox-input');
-      tagCheckboxes.forEach(checkbox => {
-        checkbox.checked = false;
-      });
+      selectAllTags(false);
     });
+
+    document.getElementById('deselect-all-tags').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault(); // Prevent scrolling on Space
+        selectAllTags(false);
+      }
+    });
+
+    // Helper function to select or deselect all tags
+    function selectAllTags(selected) {
+      const tagButtons = document.querySelectorAll('.tag-toggle');
+      const action = selected ? 'Selected' : 'Deselected';
+
+      tagButtons.forEach(button => {
+        button.classList.toggle('selected', selected);
+        button.setAttribute('aria-pressed', selected.toString());
+      });
+
+      // Update summary and announce to screen readers
+      updateTagSelectionSummary();
+      document.getElementById('tag-selection-status').textContent =
+        `${action} all tags`;
+
+      // Focus the first tag after selection
+      const firstTag = document.querySelector('.tag-toggle');
+      if (firstTag) {
+        setTimeout(() => firstTag.focus(), 50);
+      }
+    }
 
     // Practice Screen
     document.getElementById('submit-answer-btn').addEventListener('click', submitAnswer);
