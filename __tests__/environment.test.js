@@ -53,7 +53,14 @@ describe('Environment Utilities', () => {
   describe('getEnvironmentConfig', () => {
     it('returns default values when environment variables are not set', () => {
       // Use our helper function to temporarily modify the environment
-      withEnv({ NODE_ENV: null }, () => {
+      // Explicitly unset API keys and other variables
+      withEnv({
+        NODE_ENV: null,
+        GEMINI_API_KEY: null,
+        OPENAI_API_KEY: null,
+        ENABLE_ANALYTICS: null,
+        API_TIMEOUT: null
+      }, () => {
         const config = getEnvironmentConfig();
 
         expect(config.GEMINI_API_KEY).toBe('');

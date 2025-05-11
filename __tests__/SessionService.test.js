@@ -175,8 +175,8 @@ describe('SessionService', () => {
     
     it('throws an error if session is not found', async () => {
       mockDb.getSession.mockResolvedValue(null);
-      
-      await expect(sessionService.submitAnswer('nonexistent', 'Hallo')).rejects.toThrow('Session not found');
+
+      await expect(sessionService.submitAnswer('nonexistent', 'Hallo')).rejects.toThrow('session could not be found');
     });
     
     it('throws an error if session is complete', async () => {

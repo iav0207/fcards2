@@ -1,5 +1,13 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// IPC event listeners
+ipcRenderer.on('flashcards:error', (event, errorData) => {
+  // Dispatch a custom event to the window
+  window.dispatchEvent(new CustomEvent('flashcards:error', {
+    detail: errorData
+  }));
+});
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('flashcards', {

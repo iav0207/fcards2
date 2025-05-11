@@ -4,6 +4,7 @@ const path = require('path');
 const DatabaseService = require('./src/services/DatabaseService');
 const TranslationService = require('./src/services/TranslationService');
 const SessionService = require('./src/services/SessionService');
+const errorHandler = require('./src/utils/errorHandler');
 
 // Keep a reference to the main window to prevent it from being garbage collected
 let mainWindow;
@@ -356,10 +357,43 @@ ipcMain.handle('session:getCurrentCard', async (event, sessionId) => {
 
 ipcMain.handle('session:submitAnswer', async (event, { sessionId, answer }) => {
   try {
-    return await sessionService.submitAnswer(sessionId, answer);
+    const result = await sessionService.submitAnswer(sessionId, answer);
+
+    // If we had a translation error but still managed to create a result,
+    // send a notification but don't break the flow
+    if (result._hadTranslationError) {
+      errorHandler.handleError(
+        mainWindow,
+        'Translation Issue',
+        'There was a problem with the translation service, but your answer was accepted.',
+        'translation',
+        'warning'
+      );
+    }
+
+    // If the evaluation used a fallback method, let the user know
+    if (result.evaluation && result.evaluation._fallback) {
+      errorHandler.handleError(
+        mainWindow,
+        'Evaluation Fallback',
+        'We had to use a simplified evaluation method due to API issues.',
+        'translation',
+        'info'
+      );
+    }
+
+    return result;
   } catch (error) {
-    console.error('Error submitting answer:', error);
-    throw error;
+    // Send the error to the renderer
+    const errorInfo = errorHandler.handleException(
+      mainWindow,
+      error,
+      error.sessionError ? 'session' : 'answer',
+      'submitting answer'
+    );
+
+    // Throw a more user-friendly error
+    throw new Error(errorInfo.message || 'Failed to submit your answer. Please try again.');
   }
 });
 
@@ -386,8 +420,27 @@ ipcMain.handle('translation:evaluate', async (event, data) => {
   try {
     return await translationService.evaluateTranslation(data);
   } catch (error) {
-    console.error('Error evaluating translation:', error);
-    throw error;
+    // Create a structured error and send to renderer
+    errorHandler.handleException(
+      mainWindow,
+      error,
+      'translation',
+      'translation evaluation'
+    );
+
+    // Return a fallback result to prevent app from crashing
+    return {
+      correct: false,
+      score: 0,
+      feedback: 'Unable to evaluate translation due to an error. Please try again later.',
+      suggestedTranslation: data.referenceTranslation || 'Translation unavailable',
+      details: {
+        grammar: 'Evaluation unavailable',
+        vocabulary: 'Evaluation unavailable',
+        accuracy: 'Evaluation unavailable'
+      },
+      _error: true // Flag to indicate this is a fallback result
+    };
   }
 });
 
@@ -395,8 +448,21 @@ ipcMain.handle('translation:generate', async (event, data) => {
   try {
     return await translationService.generateTranslation(data);
   } catch (error) {
-    console.error('Error generating translation:', error);
-    throw error;
+    // Create a structured error and send to renderer
+    errorHandler.handleException(
+      mainWindow,
+      error,
+      'translation',
+      'translation generation'
+    );
+
+    // Return a fallback result with the error details
+    let apiKeyMessage = '';
+    if (error.message.includes('API key')) {
+      apiKeyMessage = ' Please check your API key in settings.';
+    }
+
+    return `[Translation error: ${error.message}${apiKeyMessage}]`;
   }
 });
 

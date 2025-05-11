@@ -209,13 +209,115 @@
       min-height: 100px;
       margin-bottom: 20px;
     }
+
+    /* Notification System Styles */
+    .notification-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      max-width: 400px;
+      z-index: 9999;
+      transition: all 0.3s ease;
+    }
+
+    .notification {
+      margin-bottom: 10px;
+      padding: 15px;
+      border-radius: 4px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: opacity 0.3s, transform 0.3s;
+    }
+
+    .notification.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .notification-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .notification-close {
+      cursor: pointer;
+      font-size: 16px;
+      opacity: 0.7;
+    }
+
+    .notification-close:hover {
+      opacity: 1;
+    }
+
+    .notification-content {
+      margin-bottom: 10px;
+    }
+
+    .notification-details {
+      font-size: 12px;
+      margin-top: 5px;
+      color: rgba(255, 255, 255, 0.7);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 5px;
+    }
+
+    .notification-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .notification-btn {
+      padding: 5px 10px;
+      border-radius: 4px;
+      border: none;
+      font-size: 12px;
+      cursor: pointer;
+      background-color: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+
+    .notification-btn:hover {
+      background-color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Notification types */
+    .notification.error {
+      background-color: rgba(244, 67, 54, 0.9);
+      color: white;
+    }
+
+    .notification.warning {
+      background-color: rgba(255, 152, 0, 0.9);
+      color: white;
+    }
+
+    .notification.info {
+      background-color: rgba(33, 150, 243, 0.9);
+      color: white;
+    }
+
+    .notification.success {
+      background-color: rgba(76, 175, 80, 0.9);
+      color: white;
+    }
   </style>
 </head>
 <body>
+  <!-- Notification Container -->
+  <div id="notification-container" class="notification-container"></div>
+
   <div class="container">
     <h1>FlashCards Desktop</h1>
     <p>A language learning application to create and practice flashcards</p>
-    
+
     <!-- Home Screen -->
     <div id="home-screen" class="screen active">
       <div class="info-container">
@@ -476,14 +578,21 @@
 
         const savedCard = await window.flashcards.saveFlashCard(sampleCard);
         console.log('Sample card created:', savedCard);
-        
+
         // Refresh stats after creating a card
         await loadDatabaseStats();
 
-        alert('Sample card created successfully!');
+        // Show success notification
+        notificationSystem.success('Card Created', 'Sample card created successfully!');
       } catch (error) {
         console.error('Error creating sample card:', error);
-        alert('Error creating sample card: ' + error.message);
+
+        // Show error notification
+        notificationSystem.error(
+          'Card Creation Failed',
+          'Failed to create sample card',
+          error.message
+        );
       }
     }
 
@@ -493,17 +602,35 @@
         const sourceLanguage = document.getElementById('source-language').value;
         const targetLanguage = document.getElementById('target-language').value;
         const maxCards = parseInt(document.getElementById('card-count').value, 10);
-        
+
         if (sourceLanguage === targetLanguage) {
-          alert('Source and target languages must be different!');
+          notificationSystem.warning(
+            'Invalid Languages',
+            'Source and target languages must be different!',
+            [{
+              label: 'Change Languages',
+              action: () => {
+                // Focus on the target language dropdown
+                document.getElementById('target-language').focus();
+              }
+            }]
+          );
           return;
         }
-        
+
         // Use real cards from the database if there are enough,
         // otherwise fall back to sample cards
         const stats = await window.flashcards.getDatabaseStats();
         const useSampleCards = stats.flashcardsCount < 5; // Fallback to samples if not enough cards
         console.log(`Creating session with: sourceLanguage=${sourceLanguage}, targetLanguage=${targetLanguage}, useSampleCards=${useSampleCards}`);
+
+        // If using sample cards, inform the user
+        if (useSampleCards && stats.flashcardsCount === 0) {
+          notificationSystem.info(
+            'Using Sample Cards',
+            'No flashcards found in database. Using sample cards for this session.'
+          );
+        }
 
         const sessionData = await window.flashcards.createGameSession({
           sourceLanguage,
@@ -513,18 +640,31 @@
         });
 
         console.log('Session created with card IDs:', sessionData.cardIds);
-        
+
         state.sessionId = sessionData.id;
         console.log('Created session:', sessionData);
-        
+
         // Load the first card
         await loadCurrentCard();
-        
+
         // Show practice screen
         showScreen('practice');
       } catch (error) {
         console.error('Error creating session:', error);
-        alert('Error creating session: ' + error.message);
+
+        notificationSystem.error(
+          'Session Creation Failed',
+          'Could not create practice session',
+          error.message,
+          [{
+            label: 'Try Again',
+            action: () => {
+              // Re-enable the create button if it was disabled
+              const createBtn = document.getElementById('create-session-btn');
+              createBtn.disabled = false;
+            }
+          }]
+        );
       }
     }
 
@@ -560,21 +700,59 @@
     async function submitAnswer() {
       try {
         const answer = document.getElementById('translation-input').value.trim();
-        
+
         if (!answer) {
-          alert('Please enter a translation!');
+          notificationSystem.warning(
+            'Empty Translation',
+            'Please enter a translation before submitting!'
+          );
           return;
         }
-        
+
+        // Disable submit button to prevent double submission
+        const submitBtn = document.getElementById('submit-answer-btn');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Evaluating...';
+
         const result = await window.flashcards.submitAnswer(state.sessionId, answer);
-        
+
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+
         state.lastAnswer = answer;
         state.lastEvaluation = result;
-        
+
+        // If there was a translation issue but we managed to continue, show an info notification
+        if (result._hadTranslationError) {
+          notificationSystem.info(
+            'Translation Note',
+            'Using simplified translation due to service unavailability.'
+          );
+        }
+
         showFeedback(result);
       } catch (error) {
         console.error('Error submitting answer:', error);
-        alert('Error submitting answer: ' + error.message);
+
+        // Re-enable submit button
+        const submitBtn = document.getElementById('submit-answer-btn');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Answer';
+
+        notificationSystem.error(
+          'Submission Error',
+          'Failed to submit your answer',
+          error.message,
+          [{
+            label: 'Try Again',
+            action: () => {
+              // Focus back on the input
+              document.getElementById('translation-input').focus();
+            }
+          }]
+        );
       }
     }
 
@@ -649,6 +827,226 @@
       }
     }
 
+    // Notification System
+    const notificationSystem = {
+      container: document.getElementById('notification-container'),
+      notifications: [],
+      idCounter: 0,
+
+      /**
+       * Show a notification
+       * @param {Object} options - Notification options
+       * @param {string} options.type - Notification type ('error', 'warning', 'info', 'success')
+       * @param {string} options.title - Notification title
+       * @param {string} options.message - Notification message
+       * @param {string} [options.details] - Optional detailed error information
+       * @param {number} [options.duration] - Auto-dismiss duration in ms (0 for no auto-dismiss)
+       * @param {Array} [options.actions] - Array of action buttons {label, action}
+       * @returns {string} Notification ID
+       */
+      show: function(options) {
+        const { type = 'info', title, message, details, duration = 5000, actions = [] } = options;
+        const id = 'notification-' + (++this.idCounter);
+
+        // Create notification element
+        const notificationEl = document.createElement('div');
+        notificationEl.className = 'notification ' + type;
+        notificationEl.id = id;
+
+        // Create notification content
+        let html = `
+          <div class="notification-title">
+            <span>${title}</span>
+            <span class="notification-close" data-id="${id}">&times;</span>
+          </div>
+          <div class="notification-content">${message}</div>
+        `;
+
+        // Add details if provided
+        if (details) {
+          html += `<div class="notification-details">${details}</div>`;
+        }
+
+        // Add action buttons if provided
+        if (actions.length > 0) {
+          html += '<div class="notification-actions">';
+          actions.forEach((action, index) => {
+            html += `<button class="notification-btn" data-id="${id}" data-action="${index}">${action.label}</button>`;
+          });
+          html += '</div>';
+        }
+
+        notificationEl.innerHTML = html;
+
+        // Add to container
+        this.container.appendChild(notificationEl);
+
+        // Track the notification
+        const notificationObj = {
+          id,
+          element: notificationEl,
+          actions,
+          timer: null
+        };
+
+        this.notifications.push(notificationObj);
+
+        // Register event listeners
+        notificationEl.querySelector('.notification-close').addEventListener('click', () => {
+          this.dismiss(id);
+        });
+
+        // Register action button listeners
+        const actionButtons = notificationEl.querySelectorAll('.notification-btn');
+        actionButtons.forEach(button => {
+          button.addEventListener('click', (e) => {
+            const actionIndex = parseInt(e.target.dataset.action, 10);
+            if (actions[actionIndex] && typeof actions[actionIndex].action === 'function') {
+              actions[actionIndex].action();
+            }
+            this.dismiss(id);
+          });
+        });
+
+        // Show with animation
+        setTimeout(() => {
+          notificationEl.classList.add('show');
+        }, 10);
+
+        // Auto-dismiss if duration is set
+        if (duration > 0) {
+          notificationObj.timer = setTimeout(() => {
+            this.dismiss(id);
+          }, duration);
+        }
+
+        return id;
+      },
+
+      /**
+       * Dismiss a notification by ID
+       * @param {string} id - Notification ID
+       */
+      dismiss: function(id) {
+        const index = this.notifications.findIndex(n => n.id === id);
+        if (index === -1) return;
+
+        const notification = this.notifications[index];
+
+        // Clear timer if exists
+        if (notification.timer) {
+          clearTimeout(notification.timer);
+        }
+
+        // Remove animation
+        notification.element.classList.remove('show');
+
+        // Wait for animation to complete, then remove from DOM
+        setTimeout(() => {
+          if (notification.element.parentNode) {
+            notification.element.parentNode.removeChild(notification.element);
+          }
+          this.notifications.splice(index, 1);
+        }, 300);
+      },
+
+      /**
+       * Show an error notification
+       * @param {string} title - Error title
+       * @param {string} message - Error message
+       * @param {string} [details] - Detailed error information
+       * @param {Array} [actions] - Array of action buttons
+       */
+      error: function(title, message, details, actions) {
+        return this.show({
+          type: 'error',
+          title,
+          message,
+          details,
+          duration: 0, // Errors don't auto-dismiss
+          actions: actions || [
+            {
+              label: 'Copy Error',
+              action: () => {
+                const textToCopy = `${title}: ${message}\n${details || ''}`;
+                navigator.clipboard.writeText(textToCopy).catch(err => {
+                  console.error('Could not copy error:', err);
+                });
+              }
+            }
+          ]
+        });
+      },
+
+      /**
+       * Show a warning notification
+       * @param {string} title - Warning title
+       * @param {string} message - Warning message
+       * @param {Array} [actions] - Array of action buttons
+       */
+      warning: function(title, message, actions) {
+        return this.show({
+          type: 'warning',
+          title,
+          message,
+          duration: 7000,
+          actions
+        });
+      },
+
+      /**
+       * Show an info notification
+       * @param {string} title - Info title
+       * @param {string} message - Info message
+       * @param {Array} [actions] - Array of action buttons
+       */
+      info: function(title, message, actions) {
+        return this.show({
+          type: 'info',
+          title,
+          message,
+          duration: 5000,
+          actions
+        });
+      },
+
+      /**
+       * Show a success notification
+       * @param {string} title - Success title
+       * @param {string} message - Success message
+       */
+      success: function(title, message) {
+        return this.show({
+          type: 'success',
+          title,
+          message,
+          duration: 3000
+        });
+      }
+    };
+
+    // Handle errors from IPC
+    window.addEventListener('flashcards:error', (event) => {
+      const { type, title, message, details, source } = event.detail;
+
+      console.error(`[${source}] ${title}: ${message}`, details);
+
+      let actions = [];
+
+      // For translation API errors, add setup action
+      if (source === 'translation') {
+        actions.push({
+          label: 'Setup API Key',
+          action: () => {
+            // This would show a settings dialog - placeholder for now
+            alert('API key setup is not implemented yet.');
+          }
+        });
+      }
+
+      notificationSystem.error(title, message, details, actions);
+    });
+
     // Initial load
     loadDatabaseStats();
 
@@ -656,20 +1054,52 @@
     document.getElementById('refresh-stats').addEventListener('click', loadDatabaseStats);
     document.getElementById('create-sample-card').addEventListener('click', createSampleCard);
     document.getElementById('start-practice-btn').addEventListener('click', () => showScreen('setup'));
-    
+
     // Setup Screen
     document.getElementById('back-to-home-btn').addEventListener('click', () => showScreen('home'));
     document.getElementById('create-session-btn').addEventListener('click', createSession);
-    
+
     // Practice Screen
     document.getElementById('submit-answer-btn').addEventListener('click', submitAnswer);
-    
+
     // Feedback Screen
     document.getElementById('next-card-btn').addEventListener('click', nextCard);
-    
+
     // Results Screen
     document.getElementById('back-to-home-from-results-btn').addEventListener('click', () => showScreen('home'));
     document.getElementById('start-new-session-btn').addEventListener('click', () => showScreen('setup'));
+
+    // Test notification button (for development)
+    if (process.env.NODE_ENV === 'development') {
+      // Create test notification button
+      const testNotificationBtn = document.createElement('button');
+      testNotificationBtn.textContent = 'Test Notifications';
+      testNotificationBtn.style.marginTop = '20px';
+
+      // Add to home screen
+      document.querySelector('#home-screen .button-container').appendChild(testNotificationBtn);
+
+      // Add event listener
+      testNotificationBtn.addEventListener('click', () => {
+        notificationSystem.info('Info Notification', 'This is a sample info notification.');
+
+        setTimeout(() => {
+          notificationSystem.success('Success Notification', 'This is a sample success notification.');
+        }, 1000);
+
+        setTimeout(() => {
+          notificationSystem.warning('Warning Notification', 'This is a sample warning notification.');
+        }, 2000);
+
+        setTimeout(() => {
+          notificationSystem.error(
+            'Error Notification',
+            'This is a sample error notification.',
+            'Here are some details about the error that would help with debugging.'
+          );
+        }, 3000);
+      });
+    }
 
     // Database Management
 

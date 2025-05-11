@@ -104,20 +104,41 @@ class TranslationService {
       if (primaryProvider) {
         return await primaryProvider.evaluateTranslation(data);
       }
-      
+
       // If primary provider not available, try fallback provider
       const fallbackProvider = this._getFallbackProvider();
       if (fallbackProvider) {
         return await fallbackProvider.evaluateTranslation(data);
       }
-      
+
       // If no providers are available, use the baseline algorithm
+      console.warn('No translation providers available. Using baseline evaluation.');
       return this._evaluateTranslationBaseline(data);
     } catch (error) {
       console.error('Translation evaluation error:', error.message);
-      
-      // Fall back to baseline method in case of API errors
-      return this._evaluateTranslationBaseline(data);
+
+      // Enhance the error with translation-specific context
+      const enhancedError = new Error(`Translation evaluation failed: ${error.message}`);
+
+      // Add metadata to help diagnose the issue
+      enhancedError.originalError = error;
+      enhancedError.translationContext = {
+        provider: this.primaryProvider,
+        hasApiKey: Boolean(this.settings.translationApiKey),
+        sourceLanguage: data.sourceLanguage,
+        targetLanguage: data.targetLanguage,
+        apiAvailable: Boolean(this.providers[this.primaryProvider])
+      };
+
+      // If this is an API key error, make it more user-friendly
+      if (error.message.includes('API key') || error.message.includes('authentication')) {
+        enhancedError.message = `Translation API key error: The API key for ${this.primaryProvider} ` +
+          `is missing or invalid. Please check your settings.`;
+        enhancedError.apiKeyError = true;
+      }
+
+      // Throw the enhanced error for better error handling upstream
+      throw enhancedError;
     }
   }
 
@@ -126,7 +147,7 @@ class TranslationService {
    * @param {Object} data - Translation data
    * @param {string} data.content - Content to translate
    * @param {string} data.sourceLanguage - Source language code
-   * @param {string} data.targetLanguage - Target language code 
+   * @param {string} data.targetLanguage - Target language code
    * @returns {Promise<string>} - Generated translation
    */
   async generateTranslation(data) {
@@ -136,20 +157,42 @@ class TranslationService {
       if (primaryProvider) {
         return await primaryProvider.generateTranslation(data);
       }
-      
+
       // If primary provider not available, try fallback provider
       const fallbackProvider = this._getFallbackProvider();
       if (fallbackProvider) {
         return await fallbackProvider.generateTranslation(data);
       }
-      
+
       // If no providers are available, use the baseline algorithm
+      console.warn('No translation providers available. Using baseline translation generation.');
       return this._generateTranslationBaseline(data);
     } catch (error) {
       console.error('Translation generation error:', error.message);
-      
-      // Fall back to baseline method in case of API errors
-      return this._generateTranslationBaseline(data);
+
+      // Enhance the error with translation-specific context
+      const enhancedError = new Error(`Translation generation failed: ${error.message}`);
+
+      // Add metadata to help diagnose the issue
+      enhancedError.originalError = error;
+      enhancedError.translationContext = {
+        provider: this.primaryProvider,
+        hasApiKey: Boolean(this.settings.translationApiKey),
+        sourceLanguage: data.sourceLanguage,
+        targetLanguage: data.targetLanguage,
+        contentLength: data.content.length,
+        apiAvailable: Boolean(this.providers[this.primaryProvider])
+      };
+
+      // If this is an API key error, make it more user-friendly
+      if (error.message.includes('API key') || error.message.includes('authentication')) {
+        enhancedError.message = `Translation API key error: The API key for ${this.primaryProvider} ` +
+          `is missing or invalid. Please check your settings.`;
+        enhancedError.apiKeyError = true;
+      }
+
+      // Throw the enhanced error for better error handling upstream
+      throw enhancedError;
     }
   }
   

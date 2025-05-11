@@ -133,10 +133,10 @@ describe('TranslationService', () => {
         apiProvider: 'gemini',
         apiKey: 'test-key'
       });
-      
+
       // Make the provider throw an error
       service.providers.gemini.evaluateTranslation.mockRejectedValue(new Error('API error'));
-      
+
       const data = {
         sourceContent: 'Hello',
         sourceLanguage: 'en',
@@ -144,12 +144,9 @@ describe('TranslationService', () => {
         userTranslation: 'Hallo',
         referenceTranslation: 'Hallo'
       };
-      
-      const result = await service.evaluateTranslation(data);
-      
-      // Expect the result to come from the baseline implementation
-      expect(result).toBeDefined();
-      expect(result.feedback).toBeDefined();
+
+      // With our enhanced error handling, we expect this to throw an error now
+      await expect(service.evaluateTranslation(data)).rejects.toThrow('Translation evaluation failed');
     });
   });
   
@@ -195,20 +192,18 @@ describe('TranslationService', () => {
         apiProvider: 'gemini',
         apiKey: 'test-key'
       });
-      
+
       // Make the provider throw an error
       service.providers.gemini.generateTranslation.mockRejectedValue(new Error('API error'));
-      
+
       const data = {
         content: 'Hello',
         sourceLanguage: 'en',
         targetLanguage: 'de'
       };
-      
-      const result = await service.generateTranslation(data);
-      
-      // Expect the result to be defined
-      expect(result).toBeDefined();
+
+      // With our enhanced error handling, we expect this to throw an error now
+      await expect(service.generateTranslation(data)).rejects.toThrow('Translation generation failed');
     });
   });
   

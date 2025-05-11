@@ -123,56 +123,98 @@ class SessionService {
    * @returns {Promise<Object>} - Evaluation result
    */
   async submitAnswer(sessionId, answer) {
-    const session = await this.db.getSession(sessionId);
-    
-    if (!session) {
-      throw new Error(`Session not found: ${sessionId}`);
+    try {
+      const session = await this.db.getSession(sessionId);
+
+      if (!session) {
+        throw new Error(`Session not found: ${sessionId}`);
+      }
+
+      if (session.currentCardIndex >= session.cardIds.length || session.completedAt) {
+        throw new Error('Session is already complete');
+      }
+
+      const cardId = session.cardIds[session.currentCardIndex];
+      const card = await this.db.getFlashCard(cardId);
+
+      if (!card) {
+        throw new Error(`Card not found: ${cardId}`);
+      }
+
+      // Generate a reference translation if needed
+      let referenceTranslation = card.userTranslation;
+      let translationError = null;
+
+      try {
+        if (!referenceTranslation) {
+          referenceTranslation = await this.translationService.generateTranslation({
+            content: card.content,
+            sourceLanguage: session.sourceLanguage,
+            targetLanguage: session.targetLanguage
+          });
+        }
+      } catch (error) {
+        console.error('Error generating reference translation:', error);
+        translationError = error;
+        // Continue with evaluation despite the error
+        referenceTranslation = answer; // Fallback to user's answer
+      }
+
+      let evaluation;
+      try {
+        // Evaluate the answer
+        evaluation = await this.translationService.evaluateTranslation({
+          sourceContent: card.content,
+          sourceLanguage: session.sourceLanguage,
+          targetLanguage: session.targetLanguage,
+          userTranslation: answer,
+          referenceTranslation
+        });
+      } catch (error) {
+        console.error('Error evaluating translation:', error);
+
+        // Provide a fallback evaluation
+        evaluation = {
+          correct: true, // Give the benefit of the doubt
+          score: 0.5,
+          feedback: translationError ?
+            "We couldn't properly evaluate your translation due to an API error. Continuing session." :
+            "Your answer was accepted, but we couldn't provide detailed feedback.",
+          suggestedTranslation: referenceTranslation,
+          details: {
+            grammar: "Evaluation unavailable",
+            vocabulary: "Evaluation unavailable",
+            accuracy: "Evaluation unavailable"
+          },
+          _fallback: true // Flag to indicate this is a fallback evaluation
+        };
+      }
+
+      // Record the response (even with fallback evaluation)
+      session.recordResponse(cardId, answer, evaluation.correct);
+
+      // Save the updated session
+      await this.db.saveSession(session);
+
+      // Return the evaluation result
+      return {
+        sessionId: session.id,
+        cardId,
+        evaluation,
+        referenceTranslation,
+        _hadTranslationError: Boolean(translationError)
+      };
+    } catch (error) {
+      // Throw a more descriptive error for session issues
+      if (error.message.includes('Session not found')) {
+        const enhancedError = new Error(`Session error: The practice session could not be found or has expired.`);
+        enhancedError.sessionError = true;
+        throw enhancedError;
+      }
+
+      // Re-throw other errors
+      throw error;
     }
-    
-    if (session.currentCardIndex >= session.cardIds.length || session.completedAt) {
-      throw new Error('Session is already complete');
-    }
-    
-    const cardId = session.cardIds[session.currentCardIndex];
-    const card = await this.db.getFlashCard(cardId);
-    
-    if (!card) {
-      throw new Error(`Card not found: ${cardId}`);
-    }
-    
-    // Generate a reference translation if needed
-    let referenceTranslation = card.userTranslation;
-    
-    if (!referenceTranslation) {
-      referenceTranslation = await this.translationService.generateTranslation({
-        content: card.content,
-        sourceLanguage: session.sourceLanguage,
-        targetLanguage: session.targetLanguage
-      });
-    }
-    
-    // Evaluate the answer
-    const evaluation = await this.translationService.evaluateTranslation({
-      sourceContent: card.content,
-      sourceLanguage: session.sourceLanguage,
-      targetLanguage: session.targetLanguage,
-      userTranslation: answer,
-      referenceTranslation
-    });
-    
-    // Record the response
-    session.recordResponse(cardId, answer, evaluation.correct);
-    
-    // Save the updated session
-    await this.db.saveSession(session);
-    
-    // Return the evaluation result
-    return {
-      sessionId: session.id,
-      cardId,
-      evaluation,
-      referenceTranslation
-    };
   }
 
   /**

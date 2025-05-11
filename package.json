@@ -1,6 +1,6 @@
 {
   "name": "fcardsweb2",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A desktop application for language learning using a flashcard system",
   "main": "main.js",
   "scripts": {
