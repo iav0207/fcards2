@@ -1,7 +1,7 @@
 /**
  * Tests for OpenAIProvider
  */
-const OpenAIProvider = require('../../src/services/translation/OpenAIProvider');
+const OpenAIProvider = require('../../src/services/translation/providers/OpenAIProvider');
 
 // Mock the global fetch function
 global.fetch = jest.fn();

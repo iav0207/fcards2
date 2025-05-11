@@ -39,15 +39,11 @@ describe('SettingsRepository', () => {
     test('should save settings to the database', () => {
       // Create test settings
       const settings = new Settings({
-        apiKeys: {
-          gemini: 'test-gemini-key',
-          openai: 'test-openai-key'
-        },
-        preferences: {
-          theme: 'dark',
-          defaultSourceLanguage: 'en',
-          defaultTargetLanguage: 'de'
-        }
+        darkMode: true,
+        translationApiKey: 'test-gemini-key',
+        translationApiProvider: 'gemini',
+        defaultSourceLanguage: 'en',
+        defaultTargetLanguage: 'de'
       });
 
       // Mock successful run
@@ -68,9 +64,9 @@ describe('SettingsRepository', () => {
       // Check that the settings were serialized properly
       const jsonArg = mockStmt.run.mock.calls[0][1];
       const parsedJson = JSON.parse(jsonArg);
-      expect(parsedJson.apiKeys.gemini).toBe('test-gemini-key');
-      expect(parsedJson.apiKeys.openai).toBe('test-openai-key');
-      expect(parsedJson.preferences.theme).toBe('dark');
+      expect(parsedJson.translationApiKey).toBe('test-gemini-key');
+      expect(parsedJson.translationApiProvider).toBe('gemini');
+      expect(parsedJson.darkMode).toBe(true);
 
       // Check that the settings were returned
       expect(result).toBe(settings);
@@ -97,15 +93,11 @@ describe('SettingsRepository', () => {
       // Mock database row return
       const mockRow = {
         settings: JSON.stringify({
-          apiKeys: {
-            gemini: 'test-gemini-key',
-            openai: 'test-openai-key'
-          },
-          preferences: {
-            theme: 'dark',
-            defaultSourceLanguage: 'en',
-            defaultTargetLanguage: 'de'
-          }
+          darkMode: true,
+          translationApiKey: 'test-gemini-key',
+          translationApiProvider: 'gemini',
+          defaultSourceLanguage: 'en',
+          defaultTargetLanguage: 'de'
         })
       };
 
@@ -122,9 +114,9 @@ describe('SettingsRepository', () => {
 
       // Check that a Settings instance was returned
       expect(result).toBeInstanceOf(Settings);
-      expect(result.apiKeys.gemini).toBe('test-gemini-key');
-      expect(result.apiKeys.openai).toBe('test-openai-key');
-      expect(result.preferences.theme).toBe('dark');
+      expect(result.translationApiKey).toBe('test-gemini-key');
+      expect(result.translationApiProvider).toBe('gemini');
+      expect(result.darkMode).toBe(true);
     });
 
     test('should return default settings when no settings are found', () => {

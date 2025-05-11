@@ -61,7 +61,7 @@ describe('SessionRepository', () => {
         JSON.stringify(session.cardIds),
         session.currentCardIndex,
         JSON.stringify(session.responses),
-        session.createdAt,
+        expect.any(String), // createdAt as string
         session.completedAt
       );
 

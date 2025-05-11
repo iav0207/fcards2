@@ -1,7 +1,7 @@
 /**
  * Tests for GeminiProvider
  */
-const GeminiProvider = require('../../src/services/translation/GeminiProvider');
+const GeminiProvider = require('../../src/services/translation/providers/GeminiProvider');
 
 // Mock the global fetch function
 global.fetch = jest.fn();

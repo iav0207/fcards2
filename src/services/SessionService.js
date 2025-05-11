@@ -1,7 +1,8 @@
-const { generateId } = require('../utils/helpers');
-const FlashCard = require('../models/FlashCard');
-const Session = require('../models/Session');
 const TranslationService = require('./TranslationService');
+const SessionManager = require('./session/SessionManager');
+const SessionCardSelector = require('./session/SessionCardSelector');
+const SessionProgressTracker = require('./session/SessionProgressTracker');
+const SessionEvaluator = require('./session/SessionEvaluator');
 
 /**
  * Service for managing practice sessions
@@ -20,9 +21,43 @@ class SessionService {
     
     this.db = options.db;
     this.translationService = options.translationService || new TranslationService();
-    this.sampleCards = this.generateSampleCards();
+    
+    // Initialize session components
+    this._initializeComponents();
+    
+    // For backwards compatibility, keep sample cards on the main service
+    this.sampleCards = this.cardSelector.generateSampleCards();
   }
-
+  
+  /**
+   * Initialize session components
+   * @private
+   */
+  _initializeComponents() {
+    // Create card selector
+    this.cardSelector = new SessionCardSelector({
+      db: this.db
+    });
+    
+    // Create progress tracker
+    this.progressTracker = new SessionProgressTracker({
+      db: this.db
+    });
+    
+    // Create evaluator
+    this.evaluator = new SessionEvaluator({
+      translationService: this.translationService
+    });
+    
+    // Create session manager
+    this.sessionManager = new SessionManager({
+      db: this.db,
+      cardSelector: this.cardSelector,
+      progressTracker: this.progressTracker,
+      evaluator: this.evaluator
+    });
+  }
+  
   /**
    * Create a new practice session
    * @param {Object} options - Session options
@@ -35,137 +70,18 @@ class SessionService {
    * @returns {Promise<Object>} - Created session data
    */
   async createSession(options = {}) {
-    const {
-      sourceLanguage = 'en',
-      targetLanguage = 'de',
-      maxCards = 10,
-      useSampleCards = true,
-      tags = [],
-      includeUntagged = false
-    } = options;
-
-    let cardIds = [];
-
-    if (useSampleCards) {
-      // Use sample cards
-      const cards = this.sampleCards
-        .filter(card => card.sourceLanguage === sourceLanguage)
-        .slice(0, maxCards);
-
-      // Save sample cards to database if they don't exist
-      for (const card of cards) {
-        const existingCard = await this.db.getFlashCard(card.id);
-        if (!existingCard) {
-          await this.db.saveFlashCard(card);
-        }
-        cardIds.push(card.id);
-      }
-    } else {
-      // Build query options
-      const queryOptions = {
-        sourceLanguage
-      };
-
-      // Add tag filtering if tags are specified
-      if (tags.length > 0 || includeUntagged) {
-        if (tags.length > 0) {
-          queryOptions.tags = tags;
-        }
-        if (includeUntagged) {
-          queryOptions.includeUntagged = true;
-        }
-      }
-
-      // Log query options for debugging
-      console.log('Fetching cards with options:', JSON.stringify(queryOptions));
-
-      // Get all matching cards
-      const allMatchingCards = await this.db.getAllFlashCards(queryOptions);
-      console.log(`Found ${allMatchingCards.length} matching cards in database`);
-
-      // If we have more cards than needed, select a random sample
-      let selectedCards;
-      if (allMatchingCards.length > maxCards) {
-        selectedCards = this.getRandomSample(allMatchingCards, maxCards);
-        console.log(`Selected ${selectedCards.length} random cards for session`);
-      } else {
-        selectedCards = allMatchingCards;
-      }
-
-      // Extract card IDs
-      cardIds = selectedCards.map(card => card.id);
-    }
-
-    // Create a new session
-    const session = new Session({
-      sourceLanguage,
-      targetLanguage,
-      cardIds,
-      currentCardIndex: 0,
-      responses: [],
-      completedAt: null
-    });
-
-    // Save the session to the database
-    await this.db.saveSession(session);
-
-    return session.toJSON();
+    return this.sessionManager.createSession(options);
   }
-
-  /**
-   * Get a random sample of cards
-   * @param {Array} cards - Array of cards to sample from
-   * @param {number} count - Number of cards to select
-   * @returns {Array} - Random sample of cards
-   * @private
-   */
-  getRandomSample(cards, count) {
-    // Make a copy of the array to avoid modifying the original
-    const cardsCopy = [...cards];
-    const result = [];
-
-    // Get a random sample
-    for (let i = 0; i < Math.min(count, cardsCopy.length); i++) {
-      const randomIndex = Math.floor(Math.random() * cardsCopy.length);
-      result.push(cardsCopy.splice(randomIndex, 1)[0]);
-    }
-
-    return result;
-  }
-
+  
   /**
    * Get the current card for a session
    * @param {string} sessionId - Session ID
    * @returns {Promise<Object|null>} - Current card data or null if session is complete
    */
   async getCurrentCard(sessionId) {
-    const session = await this.db.getSession(sessionId);
-    
-    if (!session) {
-      throw new Error(`Session not found: ${sessionId}`);
-    }
-    
-    if (session.currentCardIndex >= session.cardIds.length || session.completedAt) {
-      return null; // Session is complete
-    }
-    
-    const cardId = session.cardIds[session.currentCardIndex];
-    const card = await this.db.getFlashCard(cardId);
-    
-    if (!card) {
-      throw new Error(`Card not found: ${cardId}`);
-    }
-    
-    return {
-      sessionId: session.id,
-      sessionProgress: {
-        current: session.currentCardIndex + 1,
-        total: session.cardIds.length
-      },
-      card: card.toJSON()
-    };
+    return this.sessionManager.getCurrentCard(sessionId);
   }
-
+  
   /**
    * Submit an answer for the current card
    * @param {string} sessionId - Session ID
@@ -173,196 +89,43 @@ class SessionService {
    * @returns {Promise<Object>} - Evaluation result
    */
   async submitAnswer(sessionId, answer) {
-    try {
-      const session = await this.db.getSession(sessionId);
-
-      if (!session) {
-        throw new Error(`Session not found: ${sessionId}`);
-      }
-
-      if (session.currentCardIndex >= session.cardIds.length || session.completedAt) {
-        throw new Error('Session is already complete');
-      }
-
-      const cardId = session.cardIds[session.currentCardIndex];
-      const card = await this.db.getFlashCard(cardId);
-
-      if (!card) {
-        throw new Error(`Card not found: ${cardId}`);
-      }
-
-      // Generate a reference translation if needed
-      let referenceTranslation = card.userTranslation;
-      let translationError = null;
-
-      try {
-        if (!referenceTranslation) {
-          referenceTranslation = await this.translationService.generateTranslation({
-            content: card.content,
-            sourceLanguage: session.sourceLanguage,
-            targetLanguage: session.targetLanguage
-          });
-        }
-      } catch (error) {
-        console.error('Error generating reference translation:', error);
-        translationError = error;
-        // Continue with evaluation despite the error
-        referenceTranslation = answer; // Fallback to user's answer
-      }
-
-      let evaluation;
-      try {
-        // Evaluate the answer
-        evaluation = await this.translationService.evaluateTranslation({
-          sourceContent: card.content,
-          sourceLanguage: session.sourceLanguage,
-          targetLanguage: session.targetLanguage,
-          userTranslation: answer,
-          referenceTranslation
-        });
-      } catch (error) {
-        console.error('Error evaluating translation:', error);
-
-        // Provide a fallback evaluation
-        evaluation = {
-          correct: true, // Give the benefit of the doubt
-          score: 0.5,
-          feedback: translationError ?
-            "We couldn't properly evaluate your translation due to an API error. Continuing session." :
-            "Your answer was accepted, but we couldn't provide detailed feedback.",
-          suggestedTranslation: referenceTranslation,
-          details: {
-            grammar: "Evaluation unavailable",
-            vocabulary: "Evaluation unavailable",
-            accuracy: "Evaluation unavailable"
-          },
-          _fallback: true // Flag to indicate this is a fallback evaluation
-        };
-      }
-
-      // Record the response (even with fallback evaluation)
-      session.recordResponse(cardId, answer, evaluation.correct);
-
-      // Save the updated session
-      await this.db.saveSession(session);
-
-      // Return the evaluation result
-      return {
-        sessionId: session.id,
-        cardId,
-        evaluation,
-        referenceTranslation,
-        _hadTranslationError: Boolean(translationError)
-      };
-    } catch (error) {
-      // Throw a more descriptive error for session issues
-      if (error.message.includes('Session not found')) {
-        const enhancedError = new Error(`Session error: The practice session could not be found or has expired.`);
-        enhancedError.sessionError = true;
-        throw enhancedError;
-      }
-
-      // Re-throw other errors
-      throw error;
-    }
+    return this.sessionManager.submitAnswer(sessionId, answer);
   }
-
+  
   /**
    * Advance to the next card in the session
    * @param {string} sessionId - Session ID
    * @returns {Promise<Object>} - Updated session data
    */
   async advanceSession(sessionId) {
-    const session = await this.db.getSession(sessionId);
-    
-    if (!session) {
-      throw new Error(`Session not found: ${sessionId}`);
-    }
-    
-    if (session.completedAt) {
-      return {
-        sessionId: session.id,
-        isComplete: true,
-        stats: session.getStats()
-      };
-    }
-    
-    const hasMoreCards = session.nextCard();
-    await this.db.saveSession(session);
-    
-    if (!hasMoreCards) {
-      return {
-        sessionId: session.id,
-        isComplete: true,
-        stats: session.getStats()
-      };
-    }
-    
-    // Return next card info
-    const cardData = await this.getCurrentCard(sessionId);
-    
-    return {
-      sessionId: session.id,
-      isComplete: false,
-      nextCard: cardData
-    };
+    return this.sessionManager.advanceSession(sessionId);
   }
-
+  
   /**
    * Get session statistics
    * @param {string} sessionId - Session ID
    * @returns {Promise<Object>} - Session statistics
    */
   async getSessionStats(sessionId) {
-    const session = await this.db.getSession(sessionId);
-    
-    if (!session) {
-      throw new Error(`Session not found: ${sessionId}`);
-    }
-    
-    return {
-      sessionId: session.id,
-      stats: session.getStats(),
-      isComplete: Boolean(session.completedAt)
-    };
+    return this.sessionManager.getSessionStats(sessionId);
   }
-
+  
+  /**
+   * Get a random sample of cards
+   * @param {Array} cards - Array of cards to sample from
+   * @param {number} count - Number of cards to select
+   * @returns {Array} - Random sample of cards
+   */
+  getRandomSample(cards, count) {
+    return this.cardSelector.getRandomSample(cards, count);
+  }
+  
   /**
    * Generate sample flashcards for testing
    * @returns {FlashCard[]} - Array of sample flashcards
    */
   generateSampleCards() {
-    const sampleData = [
-      { content: 'Hello', sourceLanguage: 'en', userTranslation: 'Hallo' },
-      { content: 'Goodbye', sourceLanguage: 'en', userTranslation: 'Auf Wiedersehen' },
-      { content: 'Thank you', sourceLanguage: 'en', userTranslation: 'Danke' },
-      { content: 'Yes', sourceLanguage: 'en', userTranslation: 'Ja' },
-      { content: 'No', sourceLanguage: 'en', userTranslation: 'Nein' },
-      { content: 'Please', sourceLanguage: 'en', userTranslation: 'Bitte' },
-      { content: 'Excuse me', sourceLanguage: 'en', userTranslation: 'Entschuldigung' },
-      { content: 'Sorry', sourceLanguage: 'en', userTranslation: 'Es tut mir leid' },
-      { content: 'Good morning', sourceLanguage: 'en', userTranslation: 'Guten Morgen' },
-      { content: 'Good evening', sourceLanguage: 'en', userTranslation: 'Guten Abend' },
-      { content: 'How are you', sourceLanguage: 'en', userTranslation: 'Wie geht es dir' },
-      { content: 'What is your name', sourceLanguage: 'en', userTranslation: 'Wie heißt du' },
-      { content: 'My name is', sourceLanguage: 'en', userTranslation: 'Ich heiße' },
-      { content: 'Where is the bathroom', sourceLanguage: 'en', userTranslation: 'Wo ist die Toilette' },
-      { content: 'How much does it cost', sourceLanguage: 'en', userTranslation: 'Wie viel kostet das' },
-      { content: 'I don\'t understand', sourceLanguage: 'en', userTranslation: 'Ich verstehe nicht' },
-      { content: 'Can you help me', sourceLanguage: 'en', userTranslation: 'Können Sie mir helfen' },
-      { content: 'I would like', sourceLanguage: 'en', userTranslation: 'Ich möchte' },
-      { content: 'I am from', sourceLanguage: 'en', userTranslation: 'Ich komme aus' },
-      { content: 'Do you speak English', sourceLanguage: 'en', userTranslation: 'Sprechen Sie Englisch' }
-    ];
-    
-    return sampleData.map(data => {
-      return new FlashCard({
-        content: data.content,
-        sourceLanguage: data.sourceLanguage,
-        userTranslation: data.userTranslation,
-        tags: ['sample']
-      });
-    });
+    return this.cardSelector.generateSampleCards();
   }
 }
 

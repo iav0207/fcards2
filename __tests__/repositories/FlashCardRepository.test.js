@@ -60,8 +60,8 @@ describe('FlashCardRepository', () => {
         flashcard.comment,
         flashcard.userTranslation,
         JSON.stringify(flashcard.tags),
-        flashcard.createdAt,
-        flashcard.updatedAt
+        expect.any(String), // createdAt as string
+        expect.any(String)  // updatedAt as string
       );
 
       // Check that the flashcard was returned
