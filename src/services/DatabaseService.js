@@ -2,13 +2,17 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
-const { isEmpty } = require('../utils/helpers');
+const FlashCardRepository = require('../repositories/FlashCardRepository');
+const SessionRepository = require('../repositories/SessionRepository');
+const SettingsRepository = require('../repositories/SettingsRepository');
+const TagRepository = require('../repositories/TagRepository');
 const FlashCard = require('../models/FlashCard');
 const Session = require('../models/Session');
 const Settings = require('../models/Settings');
 
 /**
  * Service for managing database operations
+ * Now uses the repository pattern to delegate entity operations
  */
 class DatabaseService {
   /**
@@ -22,6 +26,14 @@ class DatabaseService {
     this.inMemory = options.inMemory || false;
     this.db = null;
     this.initialized = false;
+
+    // Repositories will be initialized after database connection
+    this.repositories = {
+      flashCard: null,
+      session: null,
+      settings: null,
+      tag: null
+    };
   }
 
   /**
@@ -36,8 +48,8 @@ class DatabaseService {
 
       // Determine database path if not provided
       if (!this.dbPath && !this.inMemory) {
-        const userDataPath = app ? 
-          app.getPath('userData') : 
+        const userDataPath = app ?
+          app.getPath('userData') :
           path.join(process.cwd(), 'data');
 
         // Ensure the directory exists
@@ -49,8 +61,8 @@ class DatabaseService {
       }
 
       // Create or connect to the database
-      this.db = this.inMemory ? 
-        new Database(':memory:') : 
+      this.db = this.inMemory ?
+        new Database(':memory:') :
         new Database(this.dbPath);
 
       // Enable foreign keys
@@ -59,10 +71,28 @@ class DatabaseService {
       // Create tables if they don't exist
       this._createTables();
 
+      // Initialize repositories
+      this._initializeRepositories();
+
+      // Mark service as initialized
       this.initialized = true;
+
+      // Update initialized state in repositories
+      this._setRepositoriesInitialized(true);
+
       return true;
     } catch (error) {
       console.error('Failed to initialize database:', error);
+
+      // Clean up on error
+      if (this.db) {
+        this.db.close();
+        this.db = null;
+      }
+
+      this.initialized = false;
+      this._setRepositoriesInitialized(false);
+
       throw error;
     }
   }
@@ -72,9 +102,21 @@ class DatabaseService {
    */
   close() {
     if (this.db) {
+      // Update repositories state first
+      this._setRepositoriesInitialized(false);
+
+      // Close the database connection
       this.db.close();
       this.db = null;
       this.initialized = false;
+
+      // Reset repositories
+      this.repositories = {
+        flashCard: null,
+        session: null,
+        settings: null,
+        tag: null
+      };
     }
   }
 
@@ -121,6 +163,20 @@ class DatabaseService {
   }
 
   /**
+   * Initialize repositories
+   * @private
+   */
+  _initializeRepositories() {
+    // Initialize repositories with the database connection
+    this.repositories.flashCard = new FlashCardRepository(this.db, this.initialized);
+    this.repositories.session = new SessionRepository(this.db, this.initialized);
+    this.repositories.settings = new SettingsRepository(this.db, this.initialized);
+
+    // TagRepository depends on FlashCardRepository
+    this.repositories.tag = new TagRepository(this.db, this.repositories.flashCard, this.initialized);
+  }
+
+  /**
    * Save a flashcard to the database
    * @param {FlashCard} flashcard - The flashcard to save
    * @returns {FlashCard} - The saved flashcard
@@ -130,26 +186,8 @@ class DatabaseService {
       throw new Error('Database not initialized');
     }
 
-    const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO flashcards (
-        id, content, sourceLanguage, comment, userTranslation, tags, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const json = flashcard.toJSON();
-
-    stmt.run(
-      json.id,
-      json.content,
-      json.sourceLanguage,
-      json.comment,
-      json.userTranslation,
-      JSON.stringify(json.tags),
-      json.createdAt,
-      json.updatedAt
-    );
-
-    return flashcard;
+    // Delegate to FlashCardRepository
+    return this.repositories.flashCard.saveFlashCard(flashcard);
   }
 
   /**
@@ -162,21 +200,8 @@ class DatabaseService {
       throw new Error('Database not initialized');
     }
 
-    if (isEmpty(id)) {
-      return null;
-    }
-
-    const stmt = this.db.prepare('SELECT * FROM flashcards WHERE id = ?');
-    const row = stmt.get(id);
-
-    if (!row) {
-      return null;
-    }
-
-    return FlashCard.fromJSON({
-      ...row,
-      tags: JSON.parse(row.tags || '[]')
-    });
+    // Delegate to FlashCardRepository
+    return this.repositories.flashCard.getFlashCard(id);
   }
 
   /**
@@ -196,78 +221,8 @@ class DatabaseService {
       throw new Error('Database not initialized');
     }
 
-    // Handle multiple filtering options for tags
-    const useLegacyTagFilter = !!options.tag && !options.tags;
-    const hasMultipleTags = options.tags && Array.isArray(options.tags) && options.tags.length > 0;
-    const includeUntagged = !!options.includeUntagged;
-
-    // Start building the query
-    let query = 'SELECT * FROM flashcards';
-    const params = [];
-    const conditions = [];
-
-    if (options.sourceLanguage) {
-      conditions.push('sourceLanguage = ?');
-      params.push(options.sourceLanguage);
-    }
-
-    // Legacy single tag filter
-    if (useLegacyTagFilter) {
-      conditions.push('tags LIKE ?');
-      params.push(`%"${options.tag}"%`);
-    }
-    // Multi-tag filtering
-    else if (hasMultipleTags || includeUntagged) {
-      const tagConditions = [];
-
-      // Add condition for each tag
-      if (hasMultipleTags) {
-        options.tags.forEach(tag => {
-          tagConditions.push('tags LIKE ?');
-          params.push(`%"${tag}"%`);
-        });
-      }
-
-      // Add condition for untagged cards
-      if (includeUntagged) {
-        tagConditions.push('(tags IS NULL OR tags = ? OR tags = ?)');
-        params.push('[]', '');
-      }
-
-      // Combine tag conditions with OR
-      if (tagConditions.length > 0) {
-        conditions.push(`(${tagConditions.join(' OR ')})`);
-      }
-    }
-
-    if (options.searchTerm) {
-      conditions.push('(content LIKE ? OR comment LIKE ?)');
-      params.push(`%${options.searchTerm}%`, `%${options.searchTerm}%`);
-    }
-
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
-    }
-
-    query += ' ORDER BY updatedAt DESC';
-
-    if (options.limit) {
-      query += ' LIMIT ?';
-      params.push(options.limit);
-
-      if (options.offset) {
-        query += ' OFFSET ?';
-        params.push(options.offset);
-      }
-    }
-
-    const stmt = this.db.prepare(query);
-    const rows = stmt.all(...params);
-
-    return rows.map(row => FlashCard.fromJSON({
-      ...row,
-      tags: JSON.parse(row.tags || '[]')
-    }));
+    // Delegate to FlashCardRepository
+    return this.repositories.flashCard.getAllFlashCards(options);
   }
 
   /**
@@ -280,14 +235,8 @@ class DatabaseService {
       throw new Error('Database not initialized');
     }
 
-    if (isEmpty(id)) {
-      return false;
-    }
-
-    const stmt = this.db.prepare('DELETE FROM flashcards WHERE id = ?');
-    const result = stmt.run(id);
-
-    return result.changes > 0;
+    // Delegate to FlashCardRepository
+    return this.repositories.flashCard.deleteFlashCard(id);
   }
 
   /**
@@ -300,27 +249,8 @@ class DatabaseService {
       throw new Error('Database not initialized');
     }
 
-    const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO sessions (
-        id, sourceLanguage, targetLanguage, cardIds, currentCardIndex, 
-        responses, createdAt, completedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const json = session.toJSON();
-
-    stmt.run(
-      json.id,
-      json.sourceLanguage,
-      json.targetLanguage,
-      JSON.stringify(json.cardIds),
-      json.currentCardIndex,
-      JSON.stringify(json.responses),
-      json.createdAt,
-      json.completedAt
-    );
-
-    return session;
+    // Delegate to SessionRepository
+    return this.repositories.session.saveSession(session);
   }
 
   /**
@@ -333,22 +263,8 @@ class DatabaseService {
       throw new Error('Database not initialized');
     }
 
-    if (isEmpty(id)) {
-      return null;
-    }
-
-    const stmt = this.db.prepare('SELECT * FROM sessions WHERE id = ?');
-    const row = stmt.get(id);
-
-    if (!row) {
-      return null;
-    }
-
-    return Session.fromJSON({
-      ...row,
-      cardIds: JSON.parse(row.cardIds || '[]'),
-      responses: JSON.parse(row.responses || '[]')
-    });
+    // Delegate to SessionRepository
+    return this.repositories.session.getSession(id);
   }
 
   /**
@@ -365,42 +281,8 @@ class DatabaseService {
       throw new Error('Database not initialized');
     }
 
-    let query = 'SELECT * FROM sessions';
-    const params = [];
-    const conditions = [];
-
-    if (options.activeOnly) {
-      conditions.push('completedAt IS NULL');
-    }
-
-    if (options.completedOnly) {
-      conditions.push('completedAt IS NOT NULL');
-    }
-
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
-    }
-
-    query += ' ORDER BY createdAt DESC';
-
-    if (options.limit) {
-      query += ' LIMIT ?';
-      params.push(options.limit);
-
-      if (options.offset) {
-        query += ' OFFSET ?';
-        params.push(options.offset);
-      }
-    }
-
-    const stmt = this.db.prepare(query);
-    const rows = stmt.all(...params);
-
-    return rows.map(row => Session.fromJSON({
-      ...row,
-      cardIds: JSON.parse(row.cardIds || '[]'),
-      responses: JSON.parse(row.responses || '[]')
-    }));
+    // Delegate to SessionRepository
+    return this.repositories.session.getAllSessions(options);
   }
 
   /**
@@ -413,14 +295,8 @@ class DatabaseService {
       throw new Error('Database not initialized');
     }
 
-    if (isEmpty(id)) {
-      return false;
-    }
-
-    const stmt = this.db.prepare('DELETE FROM sessions WHERE id = ?');
-    const result = stmt.run(id);
-
-    return result.changes > 0;
+    // Delegate to SessionRepository
+    return this.repositories.session.deleteSession(id);
   }
 
   /**
@@ -433,18 +309,8 @@ class DatabaseService {
       throw new Error('Database not initialized');
     }
 
-    const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO settings (
-        id, settings
-      ) VALUES (?, ?)
-    `);
-
-    stmt.run(
-      'app_settings',
-      JSON.stringify(settings.toJSON())
-    );
-
-    return settings;
+    // Delegate to SettingsRepository
+    return this.repositories.settings.saveSettings(settings);
   }
 
   /**
@@ -456,20 +322,8 @@ class DatabaseService {
       throw new Error('Database not initialized');
     }
 
-    const stmt = this.db.prepare('SELECT settings FROM settings WHERE id = ?');
-    const row = stmt.get('app_settings');
-
-    if (!row) {
-      return Settings.getDefaults();
-    }
-
-    try {
-      const settingsData = JSON.parse(row.settings);
-      return Settings.fromJSON(settingsData);
-    } catch (error) {
-      console.error('Failed to parse settings:', error);
-      return Settings.getDefaults();
-    }
+    // Delegate to SettingsRepository
+    return this.repositories.settings.getSettings();
   }
 
   /**
@@ -482,46 +336,8 @@ class DatabaseService {
       throw new Error('Database not initialized');
     }
 
-    // If no source language is provided, return empty result
-    if (!sourceLanguage) {
-      return {
-        tags: [],
-        untaggedCount: 0
-      };
-    }
-
-    // First get all cards for this language
-    const allCards = this.getAllFlashCards({ sourceLanguage });
-
-    // Create a map to count occurrences of each tag
-    const tagCounts = new Map();
-    let untaggedCount = 0;
-
-    // Count all tag occurrences
-    allCards.forEach(card => {
-      if (!card.tags || card.tags.length === 0) {
-        untaggedCount++;
-      } else {
-        card.tags.forEach(tag => {
-          const count = tagCounts.get(tag) || 0;
-          tagCounts.set(tag, count + 1);
-        });
-      }
-    });
-
-    // Convert to the result format
-    const tagsWithCounts = Array.from(tagCounts.entries()).map(([tag, count]) => ({
-      tag,
-      count
-    }));
-
-    // Sort by tag name
-    tagsWithCounts.sort((a, b) => a.tag.localeCompare(b.tag));
-
-    return {
-      tags: tagsWithCounts,
-      untaggedCount
-    };
+    // Delegate to TagRepository
+    return this.repositories.tag.getAvailableTags(sourceLanguage);
   }
 
   /**
@@ -605,7 +421,7 @@ class DatabaseService {
       // Rollback on error
       this.db.exec('ROLLBACK');
       console.error('Import failed:', error);
-      
+
       throw error;
     }
   }
@@ -629,6 +445,29 @@ class DatabaseService {
       settings: settings.toJSON(),
       exportDate: new Date().toISOString()
     };
+  }
+
+  /**
+   * Update the initialized state for all repositories
+   * Called internally when the database initialization state changes
+   * @private
+   */
+  _setRepositoriesInitialized(initialized) {
+    if (this.repositories.flashCard) {
+      this.repositories.flashCard.setInitialized(initialized);
+    }
+
+    if (this.repositories.session) {
+      this.repositories.session.setInitialized(initialized);
+    }
+
+    if (this.repositories.settings) {
+      this.repositories.settings.setInitialized(initialized);
+    }
+
+    if (this.repositories.tag) {
+      this.repositories.tag.setInitialized(initialized);
+    }
   }
 }
 
