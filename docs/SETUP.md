@@ -157,3 +157,32 @@ If you're having trouble with API keys:
    ```bash
    npm run dev
    ```
+
+### SQLite Module Issues
+
+If you encounter errors related to better-sqlite3 when running the application, you might see an error message like:
+
+```
+Error: The module was compiled against a different Node.js version using
+NODE_MODULE_VERSION 115. This version of Node.js requires NODE_MODULE_VERSION 118.
+```
+
+This happens because the better-sqlite3 native module needs to be rebuilt for your specific Node.js version. To fix this:
+
+1. Rebuild the better-sqlite3 module:
+   ```bash
+   npm rebuild better-sqlite3
+   ```
+
+2. If that doesn't work, try completely reinstalling the module:
+   ```bash
+   npm uninstall better-sqlite3 && npm install better-sqlite3
+   ```
+
+3. For Electron applications, you might need to use electron-rebuild:
+   ```bash
+   npm install --save-dev electron-rebuild
+   npx electron-rebuild --force -w better-sqlite3
+   ```
+
+This issue commonly occurs after Node.js or Electron version updates, or when switching between running tests and development mode.

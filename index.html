@@ -472,7 +472,7 @@
   <div class="container">
     <h1>FlashCards Desktop</h1>
     <p>A language learning application to create and practice flashcards</p>
-
+    
     <!-- Home Screen -->
     <div id="home-screen" class="screen active">
       <div class="info-container">
@@ -514,7 +514,6 @@
           </div>
         </div>
       </div>
-
 
       <div class="button-container">
         <button id="start-practice-btn" class="primary-button" style="font-size: 16px; padding: 12px 24px;">Start Practice Session</button>
@@ -730,6 +729,7 @@
     </div>
   </div>
 
+  <!-- Basic Initialization Script -->
   <script>
     // State management
     const state = {
@@ -755,7 +755,7 @@
       Object.values(screens).forEach(screen => {
         screen.classList.remove('active');
       });
-      
+
       // Show the requested screen
       screens[screenName].classList.add('active');
     }
@@ -773,8 +773,10 @@
         document.getElementById('sessions-count').textContent = stats.sessionsCount;
         document.getElementById('active-sessions-count').textContent = stats.activeSessionsCount;
         document.getElementById('completed-sessions-count').textContent = stats.completedSessionsCount;
+        console.log('Database stats loaded', stats);
       } catch (error) {
         console.error('Error loading database stats:', error);
+        alert('Error loading database stats: ' + error.message);
       }
     }
 
@@ -795,17 +797,11 @@
         // Refresh stats after creating a card
         await loadDatabaseStats();
 
-        // Show success notification
-        notificationSystem.success('Card Created', 'Sample card created successfully!');
+        // Show success message
+        alert('Sample card created successfully!');
       } catch (error) {
         console.error('Error creating sample card:', error);
-
-        // Show error notification
-        notificationSystem.error(
-          'Card Creation Failed',
-          'Failed to create sample card',
-          error.message
-        );
+        alert('Error creating sample card: ' + error.message);
       }
     }
 
@@ -885,76 +881,10 @@
           button.addEventListener('click', () => {
             toggleTagSelection(button);
           });
-
-          // Keyboard event handling
-          button.addEventListener('keydown', (event) => {
-            // Toggle on Enter or Space
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              toggleTagSelection(button);
-            }
-
-            // Arrow key navigation between tags
-            else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-              event.preventDefault();
-              const nextButton = findNextFocusableElement(button, true);
-              if (nextButton) nextButton.focus();
-            }
-            else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-              event.preventDefault();
-              const prevButton = findNextFocusableElement(button, false);
-              if (prevButton) prevButton.focus();
-            }
-            else if (event.key === 'Home') {
-              event.preventDefault();
-              const firstButton = document.querySelector('.tag-toggle');
-              if (firstButton) firstButton.focus();
-            }
-            else if (event.key === 'End') {
-              event.preventDefault();
-              const allButtons = document.querySelectorAll('.tag-toggle');
-              const lastButton = allButtons[allButtons.length - 1];
-              if (lastButton) lastButton.focus();
-            }
-            else if (event.key === 'Escape') {
-              event.preventDefault();
-              // Close the tag selection panel and move focus back to header
-              const header = document.getElementById('tag-selection-header');
-              toggleTagSelectionAccordion();
-              if (header) header.focus();
-            }
-          });
         });
-
-        // Helper function to find the next focusable element
-        function findNextFocusableElement(currentElement, forward = true) {
-          const focusableElements = Array.from(
-            document.querySelectorAll('.tag-toggle, .tag-action-btn')
-          );
-
-          const currentIndex = focusableElements.indexOf(currentElement);
-
-          if (currentIndex === -1) return null;
-
-          let nextIndex;
-          if (forward) {
-            nextIndex = (currentIndex + 1) % focusableElements.length;
-          } else {
-            nextIndex = (currentIndex - 1 + focusableElements.length) % focusableElements.length;
-          }
-
-          return focusableElements[nextIndex];
-        }
       } catch (error) {
         console.error('Error loading tags:', error);
-        const tagCloudContainer = document.getElementById('tag-cloud');
-        tagCloudContainer.innerHTML = '<div class="error-message" role="alert">Failed to load tags. Please try again.</div>';
-
-        notificationSystem.error(
-          'Tag Loading Failed',
-          'Failed to load available tags',
-          error.message
-        );
+        alert('Error loading tags: ' + error.message);
       }
     }
 
@@ -967,12 +897,6 @@
       // Update button state
       button.classList.toggle('selected', newState);
       button.setAttribute('aria-pressed', newState.toString());
-
-      // Announce to screen readers
-      const statusMessage = newState ?
-        `Selected ${tagName}` :
-        `Deselected ${tagName}`;
-      document.getElementById('tag-selection-status').textContent = statusMessage;
 
       // Update summary text in the dropdown header
       updateTagSelectionSummary();
@@ -995,21 +919,35 @@
       }
 
       tagSummaryElement.textContent = summaryText;
+    }
 
-      // Update screen reader status with more detailed information
-      const selectedTags = Array.from(document.querySelectorAll('.tag-toggle.selected'))
-        .map(button => button.dataset.tag || (button.id === 'include-untagged' ? 'untagged cards' : ''))
-        .filter(tag => tag);
+    // Toggle the tag selection accordion open/closed
+    function toggleTagSelectionAccordion() {
+      const header = document.getElementById('tag-selection-header');
+      const content = document.getElementById('tag-selection-content');
+      const toggle = document.getElementById('tag-selection-toggle');
+      const isExpanded = content.classList.contains('open');
+      const newState = !isExpanded;
 
-      let statusMessage = summaryText;
-      if (selectedTags.length > 0 && selectedTags.length <= 5) {
-        statusMessage += `. Selected tags: ${selectedTags.join(', ')}`;
-      }
+      // Toggle expanded state
+      content.classList.toggle('open', newState);
 
-      // Only update the tag status if it's different to avoid repeated announcements
-      if (tagStatusElement.textContent !== statusMessage) {
-        tagStatusElement.textContent = statusMessage;
-      }
+      // Update ARIA attributes and visual indicator
+      header.setAttribute('aria-expanded', newState);
+      toggle.textContent = newState ? '▲' : '▼';
+    }
+
+    // Select or deselect all tags
+    function selectAllTags(selected) {
+      const tagButtons = document.querySelectorAll('.tag-toggle');
+
+      tagButtons.forEach(button => {
+        button.classList.toggle('selected', selected);
+        button.setAttribute('aria-pressed', selected.toString());
+      });
+
+      // Update summary
+      updateTagSelectionSummary();
     }
 
     // Create and start a practice session
@@ -1020,32 +958,17 @@
         const maxCards = parseInt(document.getElementById('card-count').value, 10);
 
         if (sourceLanguage === targetLanguage) {
-          notificationSystem.warning(
-            'Invalid Languages',
-            'Source and target languages must be different!',
-            [{
-              label: 'Change Languages',
-              action: () => {
-                // Focus on the target language dropdown
-                document.getElementById('target-language').focus();
-              }
-            }]
-          );
+          alert('Source and target languages must be different!');
           return;
         }
 
-        // Use real cards from the database if there are enough,
-        // otherwise fall back to sample cards
         const stats = await window.flashcards.getDatabaseStats();
         const useSampleCards = stats.flashcardsCount < 5; // Fallback to samples if not enough cards
         console.log(`Creating session with: sourceLanguage=${sourceLanguage}, targetLanguage=${targetLanguage}, useSampleCards=${useSampleCards}`);
 
         // If using sample cards, inform the user
         if (useSampleCards && stats.flashcardsCount === 0) {
-          notificationSystem.info(
-            'Using Sample Cards',
-            'No flashcards found in database. Using sample cards for this session.'
-          );
+          alert('No flashcards found in database. Using sample cards for this session.');
         }
 
         // Get selected tags if the container is visible
@@ -1088,20 +1011,7 @@
         showScreen('practice');
       } catch (error) {
         console.error('Error creating session:', error);
-
-        notificationSystem.error(
-          'Session Creation Failed',
-          'Could not create practice session',
-          error.message,
-          [{
-            label: 'Try Again',
-            action: () => {
-              // Re-enable the create button if it was disabled
-              const createBtn = document.getElementById('create-session-btn');
-              createBtn.disabled = false;
-            }
-          }]
-        );
+        alert('Error creating session: ' + error.message);
       }
     }
 
@@ -1109,22 +1019,22 @@
     async function loadCurrentCard() {
       try {
         const cardData = await window.flashcards.getCurrentCard(state.sessionId);
-        
+
         if (!cardData) {
           // Session is complete
           showResults();
           return;
         }
-        
+
         state.currentCard = cardData;
-        
+
         // Update UI
         document.getElementById('card-content').textContent = cardData.card.content;
-        
+
         // Update progress
         const progressPercent = (cardData.sessionProgress.current / cardData.sessionProgress.total) * 100;
         document.getElementById('session-progress').style.width = `${progressPercent}%`;
-        
+
         // Clear the input
         document.getElementById('translation-input').value = '';
       } catch (error) {
@@ -1139,10 +1049,7 @@
         const answer = document.getElementById('translation-input').value.trim();
 
         if (!answer) {
-          notificationSystem.warning(
-            'Empty Translation',
-            'Please enter a translation before submitting!'
-          );
+          alert('Please enter a translation before submitting!');
           return;
         }
 
@@ -1161,14 +1068,6 @@
         state.lastAnswer = answer;
         state.lastEvaluation = result;
 
-        // If there was a translation issue but we managed to continue, show an info notification
-        if (result._hadTranslationError) {
-          notificationSystem.info(
-            'Translation Note',
-            'Using simplified translation due to service unavailability.'
-          );
-        }
-
         showFeedback(result);
       } catch (error) {
         console.error('Error submitting answer:', error);
@@ -1178,18 +1077,7 @@
         submitBtn.disabled = false;
         submitBtn.textContent = 'Submit Answer';
 
-        notificationSystem.error(
-          'Submission Error',
-          'Failed to submit your answer',
-          error.message,
-          [{
-            label: 'Try Again',
-            action: () => {
-              // Focus back on the input
-              document.getElementById('translation-input').focus();
-            }
-          }]
-        );
+        alert('Error submitting answer: ' + error.message);
       }
     }
 
@@ -1198,20 +1086,20 @@
       // Update progress in the feedback screen
       const progressPercent = (state.currentCard.sessionProgress.current / state.currentCard.sessionProgress.total) * 100;
       document.getElementById('feedback-progress').style.width = `${progressPercent}%`;
-      
+
       // Show the original text
       document.getElementById('feedback-original').textContent = state.currentCard.card.content;
-      
+
       // Show the user's answer
       document.getElementById('feedback-user-answer').textContent = state.lastAnswer;
-      
+
       // Show the suggested translation
       document.getElementById('feedback-suggested').textContent = result.referenceTranslation;
-      
+
       // Show the feedback message
       const feedbackElement = document.getElementById('feedback-result');
       feedbackElement.textContent = result.evaluation.feedback;
-      
+
       if (result.evaluation.correct) {
         feedbackElement.classList.add('correct');
         feedbackElement.classList.remove('incorrect');
@@ -1219,7 +1107,7 @@
         feedbackElement.classList.add('incorrect');
         feedbackElement.classList.remove('correct');
       }
-      
+
       // Show the feedback screen
       showScreen('feedback');
     }
@@ -1228,7 +1116,7 @@
     async function nextCard() {
       try {
         const result = await window.flashcards.advanceSession(state.sessionId);
-        
+
         if (result.isComplete) {
           // Session is complete, show results
           showResults();
@@ -1247,15 +1135,15 @@
     async function showResults() {
       try {
         const stats = await window.flashcards.getSessionStats(state.sessionId);
-        
+
         // Update results UI
         document.getElementById('results-total').textContent = stats.stats.totalCards;
         document.getElementById('results-correct').textContent = stats.stats.correctCards;
         document.getElementById('results-accuracy').textContent = Math.round(stats.stats.accuracy) + '%';
-        
+
         // Show the results screen
         showScreen('results');
-        
+
         // Refresh database stats
         await loadDatabaseStats();
       } catch (error) {
@@ -1264,381 +1152,7 @@
       }
     }
 
-    // Notification System
-    const notificationSystem = {
-      container: document.getElementById('notification-container'),
-      notifications: [],
-      idCounter: 0,
-
-      /**
-       * Show a notification
-       * @param {Object} options - Notification options
-       * @param {string} options.type - Notification type ('error', 'warning', 'info', 'success')
-       * @param {string} options.title - Notification title
-       * @param {string} options.message - Notification message
-       * @param {string} [options.details] - Optional detailed error information
-       * @param {number} [options.duration] - Auto-dismiss duration in ms (0 for no auto-dismiss)
-       * @param {Array} [options.actions] - Array of action buttons {label, action}
-       * @returns {string} Notification ID
-       */
-      show: function(options) {
-        const { type = 'info', title, message, details, duration = 5000, actions = [] } = options;
-        const id = 'notification-' + (++this.idCounter);
-
-        // Create notification element
-        const notificationEl = document.createElement('div');
-        notificationEl.className = 'notification ' + type;
-        notificationEl.id = id;
-
-        // Create notification content
-        let html = `
-          <div class="notification-title">
-            <span>${title}</span>
-            <span class="notification-close" data-id="${id}">&times;</span>
-          </div>
-          <div class="notification-content">${message}</div>
-        `;
-
-        // Add details if provided
-        if (details) {
-          html += `<div class="notification-details">${details}</div>`;
-        }
-
-        // Add action buttons if provided
-        if (actions.length > 0) {
-          html += '<div class="notification-actions">';
-          actions.forEach((action, index) => {
-            html += `<button class="notification-btn" data-id="${id}" data-action="${index}">${action.label}</button>`;
-          });
-          html += '</div>';
-        }
-
-        notificationEl.innerHTML = html;
-
-        // Add to container
-        this.container.appendChild(notificationEl);
-
-        // Track the notification
-        const notificationObj = {
-          id,
-          element: notificationEl,
-          actions,
-          timer: null
-        };
-
-        this.notifications.push(notificationObj);
-
-        // Register event listeners
-        notificationEl.querySelector('.notification-close').addEventListener('click', () => {
-          this.dismiss(id);
-        });
-
-        // Register action button listeners
-        const actionButtons = notificationEl.querySelectorAll('.notification-btn');
-        actionButtons.forEach(button => {
-          button.addEventListener('click', (e) => {
-            const actionIndex = parseInt(e.target.dataset.action, 10);
-            if (actions[actionIndex] && typeof actions[actionIndex].action === 'function') {
-              actions[actionIndex].action();
-            }
-            this.dismiss(id);
-          });
-        });
-
-        // Show with animation
-        setTimeout(() => {
-          notificationEl.classList.add('show');
-        }, 10);
-
-        // Auto-dismiss if duration is set
-        if (duration > 0) {
-          notificationObj.timer = setTimeout(() => {
-            this.dismiss(id);
-          }, duration);
-        }
-
-        return id;
-      },
-
-      /**
-       * Dismiss a notification by ID
-       * @param {string} id - Notification ID
-       */
-      dismiss: function(id) {
-        const index = this.notifications.findIndex(n => n.id === id);
-        if (index === -1) return;
-
-        const notification = this.notifications[index];
-
-        // Clear timer if exists
-        if (notification.timer) {
-          clearTimeout(notification.timer);
-        }
-
-        // Remove animation
-        notification.element.classList.remove('show');
-
-        // Wait for animation to complete, then remove from DOM
-        setTimeout(() => {
-          if (notification.element.parentNode) {
-            notification.element.parentNode.removeChild(notification.element);
-          }
-          this.notifications.splice(index, 1);
-        }, 300);
-      },
-
-      /**
-       * Show an error notification
-       * @param {string} title - Error title
-       * @param {string} message - Error message
-       * @param {string} [details] - Detailed error information
-       * @param {Array} [actions] - Array of action buttons
-       */
-      error: function(title, message, details, actions) {
-        return this.show({
-          type: 'error',
-          title,
-          message,
-          details,
-          duration: 0, // Errors don't auto-dismiss
-          actions: actions || [
-            {
-              label: 'Copy Error',
-              action: () => {
-                const textToCopy = `${title}: ${message}\n${details || ''}`;
-                navigator.clipboard.writeText(textToCopy).catch(err => {
-                  console.error('Could not copy error:', err);
-                });
-              }
-            }
-          ]
-        });
-      },
-
-      /**
-       * Show a warning notification
-       * @param {string} title - Warning title
-       * @param {string} message - Warning message
-       * @param {Array} [actions] - Array of action buttons
-       */
-      warning: function(title, message, actions) {
-        return this.show({
-          type: 'warning',
-          title,
-          message,
-          duration: 7000,
-          actions
-        });
-      },
-
-      /**
-       * Show an info notification
-       * @param {string} title - Info title
-       * @param {string} message - Info message
-       * @param {Array} [actions] - Array of action buttons
-       */
-      info: function(title, message, actions) {
-        return this.show({
-          type: 'info',
-          title,
-          message,
-          duration: 5000,
-          actions
-        });
-      },
-
-      /**
-       * Show a success notification
-       * @param {string} title - Success title
-       * @param {string} message - Success message
-       */
-      success: function(title, message) {
-        return this.show({
-          type: 'success',
-          title,
-          message,
-          duration: 3000
-        });
-      }
-    };
-
-    // Handle errors from IPC
-    window.addEventListener('flashcards:error', (event) => {
-      const { type, title, message, details, source } = event.detail;
-
-      console.error(`[${source}] ${title}: ${message}`, details);
-
-      let actions = [];
-
-      // For translation API errors, add setup action
-      if (source === 'translation') {
-        actions.push({
-          label: 'Setup API Key',
-          action: () => {
-            // This would show a settings dialog - placeholder for now
-            alert('API key setup is not implemented yet.');
-          }
-        });
-      }
-
-      notificationSystem.error(title, message, details, actions);
-    });
-
-    // Initial load
-    loadDatabaseStats();
-
-    // Button event listeners - Home Screen
-    document.getElementById('refresh-stats').addEventListener('click', loadDatabaseStats);
-    document.getElementById('create-sample-card').addEventListener('click', createSampleCard);
-    document.getElementById('start-practice-btn').addEventListener('click', () => {
-      showScreen('setup');
-
-      // Load tags for the selected source language
-      const sourceLanguage = document.getElementById('source-language').value;
-      loadTagsForSelection(sourceLanguage);
-    });
-
-    // Setup Screen
-    document.getElementById('back-to-home-btn').addEventListener('click', () => showScreen('home'));
-    document.getElementById('create-session-btn').addEventListener('click', createSession);
-
-    // Source language change handler
-    document.getElementById('source-language').addEventListener('change', (event) => {
-      loadTagsForSelection(event.target.value);
-    });
-
-    // Tag selection accordion - properly accessible with keyboard
-    document.getElementById('tag-selection-header').addEventListener('click', () => {
-      toggleTagSelectionAccordion();
-    });
-
-    // Support keyboard activation for accordion header
-    document.getElementById('tag-selection-header').addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault(); // Prevent scrolling on Space
-        toggleTagSelectionAccordion();
-      }
-    });
-
-    // Toggle the tag selection accordion open/closed
-    function toggleTagSelectionAccordion() {
-      const header = document.getElementById('tag-selection-header');
-      const content = document.getElementById('tag-selection-content');
-      const toggle = document.getElementById('tag-selection-toggle');
-      const isExpanded = content.classList.contains('open');
-      const newState = !isExpanded;
-
-      // Toggle expanded state
-      content.classList.toggle('open', newState);
-
-      // Update ARIA attributes and visual indicator
-      header.setAttribute('aria-expanded', newState);
-      toggle.textContent = newState ? '▲' : '▼';
-
-      // Announce state change to screen readers
-      document.getElementById('tag-selection-status').textContent =
-        newState ? 'Tag selection expanded' : 'Tag selection collapsed';
-
-      // If opening, focus the first tag button or action button
-      if (newState) {
-        const firstButton = content.querySelector('.tag-toggle') ||
-                           content.querySelector('.tag-action-btn');
-        if (firstButton) {
-          setTimeout(() => firstButton.focus(), 50);
-        }
-      }
-    }
-
-    // Tag selection actions
-    document.getElementById('select-all-tags').addEventListener('click', () => {
-      selectAllTags(true);
-    });
-
-    document.getElementById('select-all-tags').addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault(); // Prevent scrolling on Space
-        selectAllTags(true);
-      }
-    });
-
-    document.getElementById('deselect-all-tags').addEventListener('click', () => {
-      selectAllTags(false);
-    });
-
-    document.getElementById('deselect-all-tags').addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault(); // Prevent scrolling on Space
-        selectAllTags(false);
-      }
-    });
-
-    // Helper function to select or deselect all tags
-    function selectAllTags(selected) {
-      const tagButtons = document.querySelectorAll('.tag-toggle');
-      const action = selected ? 'Selected' : 'Deselected';
-
-      tagButtons.forEach(button => {
-        button.classList.toggle('selected', selected);
-        button.setAttribute('aria-pressed', selected.toString());
-      });
-
-      // Update summary and announce to screen readers
-      updateTagSelectionSummary();
-      document.getElementById('tag-selection-status').textContent =
-        `${action} all tags`;
-
-      // Focus the first tag after selection
-      const firstTag = document.querySelector('.tag-toggle');
-      if (firstTag) {
-        setTimeout(() => firstTag.focus(), 50);
-      }
-    }
-
-    // Practice Screen
-    document.getElementById('submit-answer-btn').addEventListener('click', submitAnswer);
-
-    // Feedback Screen
-    document.getElementById('next-card-btn').addEventListener('click', nextCard);
-
-    // Results Screen
-    document.getElementById('back-to-home-from-results-btn').addEventListener('click', () => showScreen('home'));
-    document.getElementById('start-new-session-btn').addEventListener('click', () => showScreen('setup'));
-
-    // Test notification button (for development)
-    if (process.env.NODE_ENV === 'development') {
-      // Create test notification button
-      const testNotificationBtn = document.createElement('button');
-      testNotificationBtn.textContent = 'Test Notifications';
-      testNotificationBtn.style.marginTop = '20px';
-
-      // Add to home screen
-      document.querySelector('#home-screen .button-container').appendChild(testNotificationBtn);
-
-      // Add event listener
-      testNotificationBtn.addEventListener('click', () => {
-        notificationSystem.info('Info Notification', 'This is a sample info notification.');
-
-        setTimeout(() => {
-          notificationSystem.success('Success Notification', 'This is a sample success notification.');
-        }, 1000);
-
-        setTimeout(() => {
-          notificationSystem.warning('Warning Notification', 'This is a sample warning notification.');
-        }, 2000);
-
-        setTimeout(() => {
-          notificationSystem.error(
-            'Error Notification',
-            'This is a sample error notification.',
-            'Here are some details about the error that would help with debugging.'
-          );
-        }, 3000);
-      });
-    }
-
-    // Database Management
-
-    // Export Data
+    // Export database
     async function exportData() {
       try {
         const result = await window.flashcards.exportDatabase();
@@ -1671,7 +1185,7 @@
       }
     }
 
-    // Import Data
+    // Import database
     async function proceedWithImport() {
       try {
         const importMode = document.getElementById('import-mode').value;
@@ -1749,12 +1263,46 @@
       showScreen('operationResult');
     }
 
-    // Export/Import Button Listeners
+    // Home Screen Event Listeners
+    document.getElementById('refresh-stats').addEventListener('click', loadDatabaseStats);
+    document.getElementById('create-sample-card').addEventListener('click', createSampleCard);
+    document.getElementById('start-practice-btn').addEventListener('click', () => {
+      showScreen('setup');
+      const sourceLanguage = document.getElementById('source-language').value;
+      loadTagsForSelection(sourceLanguage);
+    });
     document.getElementById('export-data-btn').addEventListener('click', exportData);
     document.getElementById('import-data-btn').addEventListener('click', () => showScreen('import'));
+
+    // Setup Screen
+    document.getElementById('back-to-home-btn').addEventListener('click', () => showScreen('home'));
+    document.getElementById('create-session-btn').addEventListener('click', createSession);
+    document.getElementById('source-language').addEventListener('change', (event) => {
+      loadTagsForSelection(event.target.value);
+    });
+    document.getElementById('tag-selection-header').addEventListener('click', toggleTagSelectionAccordion);
+    document.getElementById('select-all-tags').addEventListener('click', () => selectAllTags(true));
+    document.getElementById('deselect-all-tags').addEventListener('click', () => selectAllTags(false));
+
+    // Practice Screen
+    document.getElementById('submit-answer-btn').addEventListener('click', submitAnswer);
+
+    // Feedback Screen
+    document.getElementById('next-card-btn').addEventListener('click', nextCard);
+
+    // Results Screen
+    document.getElementById('back-to-home-from-results-btn').addEventListener('click', () => showScreen('home'));
+    document.getElementById('start-new-session-btn').addEventListener('click', () => showScreen('setup'));
+
+    // Import Screen
     document.getElementById('back-from-import-btn').addEventListener('click', () => showScreen('home'));
     document.getElementById('proceed-import-btn').addEventListener('click', proceedWithImport);
     document.getElementById('back-to-home-from-result-btn').addEventListener('click', () => showScreen('home'));
+
+    // Initial load
+    console.log('Loading database stats');
+    loadDatabaseStats();
+    console.log('Initial setup complete');
   </script>
 </body>
 </html>
