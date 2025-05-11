@@ -183,7 +183,9 @@ class DatabaseService {
    * Get all flashcards
    * @param {Object} options - Query options
    * @param {string} [options.sourceLanguage] - Filter by source language
-   * @param {string} [options.tag] - Filter by tag
+   * @param {string|string[]} [options.tags] - Filter by one or more tags
+   * @param {boolean} [options.includeUntagged] - Whether to include cards with no tags
+   * @param {string} [options.tag] - Filter by a single tag (legacy, use tags instead)
    * @param {string} [options.searchTerm] - Search in content or comments
    * @param {number} [options.limit] - Maximum number of results
    * @param {number} [options.offset] - Results offset
@@ -194,6 +196,12 @@ class DatabaseService {
       throw new Error('Database not initialized');
     }
 
+    // Handle multiple filtering options for tags
+    const useLegacyTagFilter = !!options.tag && !options.tags;
+    const hasMultipleTags = options.tags && Array.isArray(options.tags) && options.tags.length > 0;
+    const includeUntagged = !!options.includeUntagged;
+
+    // Start building the query
     let query = 'SELECT * FROM flashcards';
     const params = [];
     const conditions = [];
@@ -203,9 +211,33 @@ class DatabaseService {
       params.push(options.sourceLanguage);
     }
 
-    if (options.tag) {
+    // Legacy single tag filter
+    if (useLegacyTagFilter) {
       conditions.push('tags LIKE ?');
       params.push(`%"${options.tag}"%`);
+    }
+    // Multi-tag filtering
+    else if (hasMultipleTags || includeUntagged) {
+      const tagConditions = [];
+
+      // Add condition for each tag
+      if (hasMultipleTags) {
+        options.tags.forEach(tag => {
+          tagConditions.push('tags LIKE ?');
+          params.push(`%"${tag}"%`);
+        });
+      }
+
+      // Add condition for untagged cards
+      if (includeUntagged) {
+        tagConditions.push('(tags IS NULL OR tags = ? OR tags = ?)');
+        params.push('[]', '');
+      }
+
+      // Combine tag conditions with OR
+      if (tagConditions.length > 0) {
+        conditions.push(`(${tagConditions.join(' OR ')})`);
+      }
     }
 
     if (options.searchTerm) {
@@ -438,6 +470,50 @@ class DatabaseService {
       console.error('Failed to parse settings:', error);
       return Settings.getDefaults();
     }
+  }
+
+  /**
+   * Get available tags for a given source language
+   * @param {string} sourceLanguage - Source language to filter tags by
+   * @returns {Object} - Available tags and counts
+   */
+  getAvailableTags(sourceLanguage) {
+    if (!this.initialized) {
+      throw new Error('Database not initialized');
+    }
+
+    // First get all cards for this language
+    const allCards = this.getAllFlashCards({ sourceLanguage });
+
+    // Create a map to count occurrences of each tag
+    const tagCounts = new Map();
+    let untaggedCount = 0;
+
+    // Count all tag occurrences
+    allCards.forEach(card => {
+      if (!card.tags || card.tags.length === 0) {
+        untaggedCount++;
+      } else {
+        card.tags.forEach(tag => {
+          const count = tagCounts.get(tag) || 0;
+          tagCounts.set(tag, count + 1);
+        });
+      }
+    });
+
+    // Convert to the result format
+    const tagsWithCounts = Array.from(tagCounts.entries()).map(([tag, count]) => ({
+      tag,
+      count
+    }));
+
+    // Sort by tag name
+    tagsWithCounts.sort((a, b) => a.tag.localeCompare(b.tag));
+
+    return {
+      tags: tagsWithCounts,
+      untaggedCount
+    };
   }
 
   /**

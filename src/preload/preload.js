@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('flashcards', {
   getAllFlashCards: (options) => ipcRenderer.invoke('flashcard:getAll', options),
   deleteFlashCard: (id) => ipcRenderer.invoke('flashcard:delete', id),
 
+  // Tag operations
+  getAvailableTags: (sourceLanguage) => ipcRenderer.invoke('tags:getAvailable', sourceLanguage),
+
   // Session operations
   saveSession: (sessionData) => ipcRenderer.invoke('session:save', sessionData),
   getSession: (id) => ipcRenderer.invoke('session:get', id),

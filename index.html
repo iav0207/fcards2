@@ -308,6 +308,73 @@
       background-color: rgba(76, 175, 80, 0.9);
       color: white;
     }
+
+    /* Tag selection styles */
+    .tag-selection-container {
+      margin-top: 20px;
+      width: 100%;
+    }
+
+    .tag-selection-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background-color: #2c2c2c;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 5px;
+    }
+
+    .tag-selection-content {
+      padding: 10px;
+      background-color: #1e1e1e;
+      border-radius: 4px;
+      display: none;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .tag-selection-content.open {
+      display: block;
+    }
+
+    .tag-checkbox {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .tag-checkbox input {
+      margin-right: 8px;
+    }
+
+    .tag-count {
+      color: #90caf9;
+      margin-left: 5px;
+      font-size: 0.8em;
+    }
+
+    .tag-selection-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+      gap: 10px;
+    }
+
+    .tag-action-btn {
+      background-color: #2c2c2c;
+      border: none;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .tag-action-btn:hover {
+      background-color: #333;
+    }
   </style>
 </head>
 <body>
@@ -403,6 +470,33 @@
         <div class="form-group">
           <label for="card-count">Number of Cards:</label>
           <input type="number" id="card-count" min="5" max="20" value="10">
+        </div>
+
+        <!-- Tag Selection Accordion -->
+        <div id="tag-selection-container" class="tag-selection-container" style="display: none;">
+          <div class="tag-selection-header" id="tag-selection-header">
+            <span>Select Tags</span>
+            <span id="tag-selection-toggle">▼</span>
+          </div>
+          <div class="tag-selection-content" id="tag-selection-content">
+            <!-- Tags will be dynamically added here -->
+            <div id="tag-checkboxes-container">
+              <div class="tag-loading">Loading tags...</div>
+            </div>
+
+            <!-- Untagged option -->
+            <div class="tag-checkbox">
+              <input type="checkbox" id="include-untagged" checked>
+              <label for="include-untagged">Include untagged cards</label>
+              <span class="tag-count" id="untagged-count">(0)</span>
+            </div>
+
+            <!-- Actions -->
+            <div class="tag-selection-actions">
+              <button class="tag-action-btn" id="select-all-tags">Select All</button>
+              <button class="tag-action-btn" id="deselect-all-tags">Deselect All</button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="button-container">
@@ -596,6 +690,72 @@
       }
     }
 
+    // Load tags for selection
+    async function loadTagsForSelection(sourceLanguage) {
+      try {
+        const tagSelectionContainer = document.getElementById('tag-selection-container');
+        const tagCheckboxesContainer = document.getElementById('tag-checkboxes-container');
+        const untaggedCountElement = document.getElementById('untagged-count');
+
+        // Show loading
+        tagCheckboxesContainer.innerHTML = '<div class="tag-loading">Loading tags...</div>';
+
+        // Fetch tags for the selected source language
+        const tagsData = await window.flashcards.getAvailableTags(sourceLanguage);
+        console.log('Available tags:', tagsData);
+
+        // Check if we have any tags
+        if (tagsData.tags.length === 0 && tagsData.untaggedCount === 0) {
+          // No tags and no cards, hide the entire container
+          tagSelectionContainer.style.display = 'none';
+          return;
+        }
+
+        // Show the container
+        tagSelectionContainer.style.display = 'block';
+
+        // Update untagged count
+        untaggedCountElement.textContent = `(${tagsData.untaggedCount})`;
+
+        // Create checkboxes for each tag
+        let checkboxesHTML = '';
+        if (tagsData.tags.length === 0) {
+          checkboxesHTML = '<div class="no-tags-message">No tags available</div>';
+        } else {
+          tagsData.tags.forEach(tagData => {
+            checkboxesHTML += `
+              <div class="tag-checkbox">
+                <input type="checkbox" id="tag-${tagData.tag}" class="tag-checkbox-input" data-tag="${tagData.tag}" checked>
+                <label for="tag-${tagData.tag}">${tagData.tag}</label>
+                <span class="tag-count">(${tagData.count})</span>
+              </div>
+            `;
+          });
+        }
+
+        // Update the container
+        tagCheckboxesContainer.innerHTML = checkboxesHTML;
+
+        // Show tag selection only if there's more than one tag or if there are both tagged and untagged cards
+        const hasMultipleTagOptions = tagsData.tags.length > 1 || (tagsData.tags.length === 1 && tagsData.untaggedCount > 0);
+
+        if (!hasMultipleTagOptions) {
+          // Just one tag option (or only untagged cards), hide the accordion
+          tagSelectionContainer.style.display = 'none';
+        }
+      } catch (error) {
+        console.error('Error loading tags:', error);
+        const tagCheckboxesContainer = document.getElementById('tag-checkboxes-container');
+        tagCheckboxesContainer.innerHTML = '<div class="error-message">Failed to load tags. Please try again.</div>';
+
+        notificationSystem.error(
+          'Tag Loading Failed',
+          'Failed to load available tags',
+          error.message
+        );
+      }
+    }
+
     // Create and start a practice session
     async function createSession() {
       try {
@@ -632,11 +792,30 @@
           );
         }
 
+        // Get selected tags if the container is visible
+        const tagSelectionContainer = document.getElementById('tag-selection-container');
+        let selectedTags = [];
+        let includeUntagged = false;
+
+        if (tagSelectionContainer.style.display !== 'none') {
+          // Get all checked tag checkboxes
+          const tagCheckboxes = document.querySelectorAll('.tag-checkbox-input:checked');
+          selectedTags = Array.from(tagCheckboxes).map(checkbox => checkbox.dataset.tag);
+
+          // Check if untagged cards should be included
+          includeUntagged = document.getElementById('include-untagged').checked;
+        }
+
+        console.log('Selected tags:', selectedTags);
+        console.log('Include untagged:', includeUntagged);
+
         const sessionData = await window.flashcards.createGameSession({
           sourceLanguage,
           targetLanguage,
           maxCards,
-          useSampleCards: useSampleCards
+          useSampleCards: useSampleCards,
+          tags: selectedTags,
+          includeUntagged: includeUntagged
         });
 
         console.log('Session created with card IDs:', sessionData.cardIds);
@@ -1053,11 +1232,51 @@
     // Button event listeners - Home Screen
     document.getElementById('refresh-stats').addEventListener('click', loadDatabaseStats);
     document.getElementById('create-sample-card').addEventListener('click', createSampleCard);
-    document.getElementById('start-practice-btn').addEventListener('click', () => showScreen('setup'));
+    document.getElementById('start-practice-btn').addEventListener('click', () => {
+      showScreen('setup');
+
+      // Load tags for the selected source language
+      const sourceLanguage = document.getElementById('source-language').value;
+      loadTagsForSelection(sourceLanguage);
+    });
 
     // Setup Screen
     document.getElementById('back-to-home-btn').addEventListener('click', () => showScreen('home'));
     document.getElementById('create-session-btn').addEventListener('click', createSession);
+
+    // Source language change handler
+    document.getElementById('source-language').addEventListener('change', (event) => {
+      loadTagsForSelection(event.target.value);
+    });
+
+    // Tag selection accordion
+    document.getElementById('tag-selection-header').addEventListener('click', () => {
+      const content = document.getElementById('tag-selection-content');
+      const toggle = document.getElementById('tag-selection-toggle');
+
+      if (content.classList.contains('open')) {
+        content.classList.remove('open');
+        toggle.textContent = '▼';
+      } else {
+        content.classList.add('open');
+        toggle.textContent = '▲';
+      }
+    });
+
+    // Tag selection actions
+    document.getElementById('select-all-tags').addEventListener('click', () => {
+      const tagCheckboxes = document.querySelectorAll('.tag-checkbox-input');
+      tagCheckboxes.forEach(checkbox => {
+        checkbox.checked = true;
+      });
+    });
+
+    document.getElementById('deselect-all-tags').addEventListener('click', () => {
+      const tagCheckboxes = document.querySelectorAll('.tag-checkbox-input');
+      tagCheckboxes.forEach(checkbox => {
+        checkbox.checked = false;
+      });
+    });
 
     // Practice Screen
     document.getElementById('submit-answer-btn').addEventListener('click', submitAnswer);

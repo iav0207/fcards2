@@ -30,19 +30,28 @@ class SessionService {
    * @param {string} options.targetLanguage - Target language code
    * @param {number} [options.maxCards=10] - Maximum number of cards
    * @param {boolean} [options.useSampleCards=true] - Whether to use sample cards
+   * @param {string[]} [options.tags=[]] - Tags to filter cards by
+   * @param {boolean} [options.includeUntagged=false] - Whether to include untagged cards
    * @returns {Promise<Object>} - Created session data
    */
   async createSession(options = {}) {
-    const { sourceLanguage = 'en', targetLanguage = 'de', maxCards = 10, useSampleCards = true } = options;
-    
+    const {
+      sourceLanguage = 'en',
+      targetLanguage = 'de',
+      maxCards = 10,
+      useSampleCards = true,
+      tags = [],
+      includeUntagged = false
+    } = options;
+
     let cardIds = [];
-    
+
     if (useSampleCards) {
       // Use sample cards
       const cards = this.sampleCards
         .filter(card => card.sourceLanguage === sourceLanguage)
         .slice(0, maxCards);
-      
+
       // Save sample cards to database if they don't exist
       for (const card of cards) {
         const existingCard = await this.db.getFlashCard(card.id);
@@ -52,21 +61,41 @@ class SessionService {
         cardIds.push(card.id);
       }
     } else {
-      // Get cards from database
-      console.log(`Fetching cards for session: sourceLanguage=${sourceLanguage}, limit=${maxCards}`);
-      const cards = await this.db.getAllFlashCards({
-        sourceLanguage,
-        limit: maxCards
-      });
+      // Build query options
+      const queryOptions = {
+        sourceLanguage
+      };
 
-      console.log(`Found ${cards.length} cards in database for sourceLanguage=${sourceLanguage}`);
-      if (cards.length > 0) {
-        console.log('First card:', cards[0].toJSON());
+      // Add tag filtering if tags are specified
+      if (tags.length > 0 || includeUntagged) {
+        if (tags.length > 0) {
+          queryOptions.tags = tags;
+        }
+        if (includeUntagged) {
+          queryOptions.includeUntagged = true;
+        }
       }
 
-      cardIds = cards.map(card => card.id);
+      // Log query options for debugging
+      console.log('Fetching cards with options:', JSON.stringify(queryOptions));
+
+      // Get all matching cards
+      const allMatchingCards = await this.db.getAllFlashCards(queryOptions);
+      console.log(`Found ${allMatchingCards.length} matching cards in database`);
+
+      // If we have more cards than needed, select a random sample
+      let selectedCards;
+      if (allMatchingCards.length > maxCards) {
+        selectedCards = this.getRandomSample(allMatchingCards, maxCards);
+        console.log(`Selected ${selectedCards.length} random cards for session`);
+      } else {
+        selectedCards = allMatchingCards;
+      }
+
+      // Extract card IDs
+      cardIds = selectedCards.map(card => card.id);
     }
-    
+
     // Create a new session
     const session = new Session({
       sourceLanguage,
@@ -76,11 +105,32 @@ class SessionService {
       responses: [],
       completedAt: null
     });
-    
+
     // Save the session to the database
     await this.db.saveSession(session);
-    
+
     return session.toJSON();
+  }
+
+  /**
+   * Get a random sample of cards
+   * @param {Array} cards - Array of cards to sample from
+   * @param {number} count - Number of cards to select
+   * @returns {Array} - Random sample of cards
+   * @private
+   */
+  getRandomSample(cards, count) {
+    // Make a copy of the array to avoid modifying the original
+    const cardsCopy = [...cards];
+    const result = [];
+
+    // Get a random sample
+    for (let i = 0; i < Math.min(count, cardsCopy.length); i++) {
+      const randomIndex = Math.floor(Math.random() * cardsCopy.length);
+      result.push(cardsCopy.splice(randomIndex, 1)[0]);
+    }
+
+    return result;
   }
 
   /**

@@ -7,12 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-05-12
+
 ### Added
-- RFC-00008: Tag-Based Deck Selection for filtering practice sessions by card tags
+- RFC-00008: Tag-Based Deck Selection implementation for filtering practice sessions by card tags
+  - Added getAvailableTags method to retrieve tags for specific languages
+  - Enhanced getAllFlashCards to support filtering by multiple tags
+  - Implemented collapsible tag selection accordion UI in session setup screen
+  - Added support for filtering by multiple tags (OR condition)
+  - Added special handling for untagged cards
+  - Implemented "Select All" and "Deselect All" functionality
+  - Added automatic hiding of tag selection UI when only one tag is available
+  - Added comprehensive tests for tag-based deck selection
 
 ### Changed
+- Enhanced SessionService.createSession to support tag filtering options
+- Improved DatabaseService with efficient tag retrieval and filtering
+- Added error handling with notification system for tag operations
+- Updated IPC handlers to support tag operations
 
 ### Fixed
+- Proper handling of empty tag arrays and null tags in database queries
 
 ## [0.2.0] - 2025-05-11
 

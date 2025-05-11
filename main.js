@@ -117,6 +117,21 @@ if (!process.env.JEST_WORKER_ID) {
 }
 
 // IPC Handlers for database operations
+// Tag operations
+ipcMain.handle('tags:getAvailable', async (event, sourceLanguage) => {
+  try {
+    return await db.getAvailableTags(sourceLanguage);
+  } catch (error) {
+    const errorInfo = errorHandler.handleException(
+      mainWindow,
+      error,
+      'database',
+      'retrieving available tags'
+    );
+    throw new Error(errorInfo.message || 'Failed to retrieve tags');
+  }
+});
+
 // FlashCard operations
 ipcMain.handle('flashcard:save', async (event, cardData) => {
   try {
@@ -341,8 +356,13 @@ ipcMain.handle('session:create', async (event, options) => {
   try {
     return await sessionService.createSession(options);
   } catch (error) {
-    console.error('Error creating session:', error);
-    throw error;
+    const errorInfo = errorHandler.handleException(
+      mainWindow,
+      error,
+      'session',
+      'creating practice session'
+    );
+    throw new Error(errorInfo.message || 'Failed to create practice session');
   }
 });
 
