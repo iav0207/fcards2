@@ -729,14 +729,18 @@
     </div>
   </div>
 
-  <!-- Load the app script -->
-  <script src="src/app.js"></script>
 
   <!-- Display initial version information -->
   <script>
-    document.getElementById('node-version').textContent = window.versions.node();
-    document.getElementById('chrome-version').textContent = window.versions.chrome();
-    document.getElementById('electron-version').textContent = window.versions.electron();
+    document.addEventListener('DOMContentLoaded', () => {
+      // Set version information
+      document.getElementById('node-version').textContent = window.versions.node();
+      document.getElementById('chrome-version').textContent = window.versions.chrome();
+      document.getElementById('electron-version').textContent = window.versions.electron();
+    });
   </script>
+
+  <!-- Load application components -->
+  <script src="src/renderer.js"></script>
 </body>
 </html>

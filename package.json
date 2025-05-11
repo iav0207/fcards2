@@ -27,6 +27,6 @@
     "spectron": "^19.0.0"
   },
   "dependencies": {
-    "better-sqlite3": "^11.10.0"
+    "better-sqlite3": "^8.7.0"
   }
 }
