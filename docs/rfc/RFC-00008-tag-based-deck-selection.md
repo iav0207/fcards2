@@ -21,27 +21,40 @@ Benefits include:
 We'll extend the session setup screen to include a tag selection interface with the following components:
 
 1. **Tag Selection Area**: Displayed after language selection and card count, but before the start button in the existing session setup screen
-   - The area will be contained in a collapsible accordion component labeled "Select Card Categories (Tags)"
-   - The accordion will be collapsed by default to maintain a clean interface
+   - The area will be a fully accessible, keyboard-navigable, collapsible component labeled "Select Card Categories (Tags)"
+   - The component will be collapsed by default to maintain a clean interface
    - When expanded, it will show the available tags
    - **If there is only one tag (or no tags) for the currently selected language pair, the tag selection area will not be shown** as it would provide no filtering benefit
+   - When collapsed, the header will show a summary of selected tags (e.g., "5/12 tags selected")
 
-2. **Tag List**: When expanded, displays all available tags **specific to the selected language pair**
+2. **Tag Cloud/Grid**: When expanded, displays all available tags **specific to the selected language pair**
    - Only tags present on cards that match the current source language will be shown
-   - Each tag is presented as a selectable checkbox with the tag name and count (e.g., "Food (12)")
-   - **An additional option "Untagged cards (X)" will be included to represent cards without any tags**
+   - Each tag is presented as a toggle button with the tag name and count (e.g., "Food (12)")
+   - Tags will have clear visual states for selected/unselected
+   - **An additional toggle button "Untagged cards (X)" will be included to represent cards without any tags**
    - Tags with no cards in the selected source language are not displayed
-   - The tag list will update dynamically when the user changes the source language
+   - The tag cloud will update dynamically when the user changes the source language
+   - Tags are arranged in a grid/flow layout for efficient use of space
    - Tags are sorted alphabetically, with the "Untagged cards" option at the bottom
 
 3. **Selection Controls**:
    - "Select All" button (default state)
    - "Deselect All" button
+   - These controls will be properly keyboard-accessible
 
 4. **Visual Design**:
-   - The tag list will use a grid or flex layout to fit multiple tags per row when space allows
-   - Selected tags will have a visual indicator (filled checkbox and highlighted background)
-   - The number of selected tags will be shown in the accordion header (e.g., "Select Card Categories (5/12 tags selected)")
+   - The tag cloud will use a grid or flex layout to fit multiple tags per row when space allows
+   - Selected tags will have a visual indicator (different background color, border, etc.)
+   - High contrast states for selected/unselected tags for better accessibility
+   - The number of selected tags will be shown in the component header (e.g., "Select Card Categories (5/12 tags selected)")
+   - Focus indicators will be clearly visible for keyboard navigation
+
+5. **Accessibility Features**:
+   - Full keyboard navigation support (Tab to cycle through tags, Space/Enter to toggle selection)
+   - ARIA roles and states for screen reader compatibility
+   - Focus management for keyboard users
+   - Proper tab order that allows skipping the tag selection entirely if desired
+   - Support for keyboard shortcuts to expand/collapse the tag area
 
 ### User Flow
 
@@ -108,11 +121,13 @@ This ensures users can quickly navigate through the main options without having 
 ### Phase 2: Frontend Changes
 
 1. Update session setup screen:
-   - Add collapsible accordion for tag selection (hidden when there's only one or no tags)
-   - Implement tag list with checkboxes, including special "Untagged cards" option
-   - Add Select All/Deselect All controls
-   - Update UI to show selected tag count
+   - Add accessible, keyboard-navigable collapsible component for tag selection (hidden when there's only one or no tags)
+   - Implement tag cloud/grid with toggle buttons, including special "Untagged cards" option
+   - Add keyboard-accessible Select All/Deselect All controls
+   - Update UI to show selected tag count in both expanded and collapsed states
    - Add event listeners to update tag list when source language changes
+   - Implement proper focus management and keyboard navigation
+   - Add appropriate ARIA attributes for screen reader support
 
 2. Update preload.js and IPC handlers:
    - Add handler for retrieving available tags by source language
@@ -161,14 +176,17 @@ This change extends the existing session creation flow without breaking backward
    - Verify untagged cards are properly included/excluded based on selection
 
 3. **Manual Testing**:
-   - Verify tab order works as expected
-   - Verify accordion behavior
-   - Test with various tag selections
+   - Verify keyboard navigation works as expected (tab order, focus management)
+   - Test keyboard interaction (Space/Enter to toggle tags, expand/collapse)
+   - Verify accessible states are correctly conveyed to screen readers
+   - Verify collapsible component behavior and state retention
+   - Test with various tag selections using both mouse and keyboard
    - Test with different language combinations
    - Test selection of untagged cards only
    - Test selection of both tagged and untagged cards
    - Verify the behavior when no tags are selected
    - Verify the tag selection UI is hidden when there's only one tag in the language
+   - Test accessibility across different screen sizes and zoom levels
 
 ## Implementation Timeline
 
