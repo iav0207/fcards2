@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- RFC-00008: Tag-Based Deck Selection for filtering practice sessions by card tags
 
 ### Changed
 
