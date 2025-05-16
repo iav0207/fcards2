@@ -862,6 +862,11 @@ class FlashCardsApp {
       
       // Clear the input
       document.getElementById('translation-input').value = '';
+
+      // Focus the input field for immediate typing
+      setTimeout(() => {
+        document.getElementById('translation-input').focus();
+      }, 100);
     } catch (error) {
       console.error('Error loading current card:', error);
       this.notificationSystem.error(
