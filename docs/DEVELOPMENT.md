@@ -64,6 +64,15 @@ All significant features should start with a Request for Comments (RFC) document
 
 - Test the main application flow
 - Test interaction between services
+- Use real in-memory databases for testing database interactions
+- Avoid mocking database operations when possible
+
+#### Database Testing
+
+- Use real in-memory SQLite databases for testing, not mocks
+- Only mock database operations when absolutely necessary
+- Ensure proper handling of async database operations with await/Promises
+- Test error conditions and edge cases with real database instances
 
 #### E2E Tests
 

@@ -25,50 +25,73 @@ class SettingsRepository {
   /**
    * Save application settings
    * @param {Settings} settings - The settings to save
-   * @returns {Settings} - The saved settings
+   * @returns {Promise<Settings>} - Promise that resolves to the saved settings
    */
   saveSettings(settings) {
     if (!this.initialized) {
-      throw new Error('Database not initialized');
+      return Promise.reject(new Error('Database not initialized'));
     }
 
-    const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO settings (
-        id, settings
-      ) VALUES (?, ?)
-    `);
+    return new Promise((resolve, reject) => {
+      const query = `
+        INSERT OR REPLACE INTO settings (
+          id, settings
+        ) VALUES (?, ?)
+      `;
 
-    stmt.run(
-      'app_settings',
-      JSON.stringify(settings.toJSON())
-    );
+      console.log('Saving application settings');
 
-    return settings;
+      this.db.run(
+        query,
+        ['app_settings', JSON.stringify(settings.toJSON())],
+        (err) => {
+          if (err) {
+            console.error('Error saving settings:', err);
+            reject(err);
+            return;
+          }
+
+          console.log('Settings saved successfully');
+          resolve(settings);
+        }
+      );
+    });
   }
 
   /**
    * Get application settings
-   * @returns {Settings} - Application settings
+   * @returns {Promise<Settings>} - Promise that resolves to application settings
    */
   getSettings() {
     if (!this.initialized) {
-      throw new Error('Database not initialized');
+      return Promise.reject(new Error('Database not initialized'));
     }
 
-    const stmt = this.db.prepare('SELECT settings FROM settings WHERE id = ?');
-    const row = stmt.get('app_settings');
+    return new Promise((resolve, reject) => {
+      console.log('Getting application settings from database');
+      this.db.get('SELECT settings FROM settings WHERE id = ?', ['app_settings'], (err, row) => {
+        if (err) {
+          console.error('Error querying settings:', err);
+          reject(err);
+          return;
+        }
 
-    if (!row) {
-      return Settings.getDefaults();
-    }
+        if (!row) {
+          console.log('No settings found, returning defaults');
+          resolve(Settings.getDefaults());
+          return;
+        }
 
-    try {
-      const settingsData = JSON.parse(row.settings);
-      return Settings.fromJSON(settingsData);
-    } catch (error) {
-      console.error('Failed to parse settings:', error);
-      return Settings.getDefaults();
-    }
+        try {
+          console.log('Parsing settings:', row.settings);
+          const settingsData = JSON.parse(row.settings);
+          resolve(Settings.fromJSON(settingsData));
+        } catch (error) {
+          console.error('Failed to parse settings:', error);
+          resolve(Settings.getDefaults());
+        }
+      });
+    });
   }
 }
 

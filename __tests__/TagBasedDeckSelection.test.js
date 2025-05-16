@@ -61,7 +61,7 @@ describe('Tag-Based Deck Selection', () => {
   
   describe('DatabaseService.getAvailableTags', () => {
     test('should return all tags for a specific language with counts', async () => {
-      const result = db.getAvailableTags('en');
+      const result = await db.getAvailableTags('en');
 
       // Debug - see what tags are actually returned
       console.log('Tags returned:', result.tags.map(t => t.tag));
@@ -70,49 +70,49 @@ describe('Tag-Based Deck Selection', () => {
       expect(result.tags.length).toBe(4);
       // And 2 untagged cards
       expect(result.untaggedCount).toBe(2);
-      
+
       // Check for specific tags
       const foodTag = result.tags.find(t => t.tag === 'food');
       expect(foodTag).toBeDefined();
       expect(foodTag.count).toBe(2);
-      
+
       const animalTag = result.tags.find(t => t.tag === 'animal');
       expect(animalTag).toBeDefined();
       expect(animalTag.count).toBe(2);
-      
+
       const buildingTag = result.tags.find(t => t.tag === 'building');
       expect(buildingTag).toBeDefined();
       expect(buildingTag.count).toBe(1);
     });
     
     test('should return only tags for the specified language', async () => {
-      const result = db.getAvailableTags('de');
+      const result = await db.getAvailableTags('de');
 
       // Debug - see what tags are actually returned for German
       console.log('German tags returned:', result.tags.map(t => t.tag));
 
       // Should have 3 tags for German: animal, food, fruit
       expect(result.tags.length).toBe(3);
-      
+
       const foodTag = result.tags.find(t => t.tag === 'food');
       expect(foodTag).toBeDefined();
       expect(foodTag.count).toBe(1);
-      
+
       const animalTag = result.tags.find(t => t.tag === 'animal');
       expect(animalTag).toBeDefined();
       expect(animalTag.count).toBe(1);
-      
+
       // 'building' tag shouldn't exist for German
       const buildingTag = result.tags.find(t => t.tag === 'building');
       expect(buildingTag).toBeUndefined();
-      
+
       // There should be no untagged German cards
       expect(result.untaggedCount).toBe(0);
     });
     
     test('should return alphabetically sorted tags with untagged at the end', async () => {
-      const result = db.getAvailableTags('en');
-      
+      const result = await db.getAvailableTags('en');
+
       // Tags should be in alphabetical order
       expect(result.tags[0].tag).toBe('animal');
       expect(result.tags[1].tag).toBe('building');
@@ -121,7 +121,7 @@ describe('Tag-Based Deck Selection', () => {
     
     test('should return empty tags array when no source language is provided', async () => {
       // When no source language is provided, it should return empty tags array
-      const result = db.getAvailableTags();
+      const result = await db.getAvailableTags();
 
       // Should have no tags when source language is not specified
       expect(result.tags).toEqual([]);
@@ -131,22 +131,22 @@ describe('Tag-Based Deck Selection', () => {
   
   describe('DatabaseService.getAllFlashCards with tag filtering', () => {
     test('should filter cards by a single tag', async () => {
-      const cards = db.getAllFlashCards({ 
-        sourceLanguage: 'en', 
-        tags: ['food'] 
+      const cards = await db.getAllFlashCards({
+        sourceLanguage: 'en',
+        tags: ['food']
       });
-      
+
       expect(cards.length).toBe(2);
       expect(cards.find(c => c.content === 'apple')).toBeDefined();
       expect(cards.find(c => c.content === 'banana')).toBeDefined();
     });
     
     test('should filter cards by multiple tags (OR logic)', async () => {
-      const cards = db.getAllFlashCards({ 
-        sourceLanguage: 'en', 
-        tags: ['food', 'animal'] 
+      const cards = await db.getAllFlashCards({
+        sourceLanguage: 'en',
+        tags: ['food', 'animal']
       });
-      
+
       expect(cards.length).toBe(4);
       expect(cards.find(c => c.content === 'apple')).toBeDefined();
       expect(cards.find(c => c.content === 'banana')).toBeDefined();
@@ -155,12 +155,12 @@ describe('Tag-Based Deck Selection', () => {
     });
     
     test('should include untagged cards when requested', async () => {
-      const cards = db.getAllFlashCards({ 
-        sourceLanguage: 'en', 
+      const cards = await db.getAllFlashCards({
+        sourceLanguage: 'en',
         tags: ['food'],
         includeUntagged: true
       });
-      
+
       expect(cards.length).toBe(4);
       expect(cards.find(c => c.content === 'apple')).toBeDefined();
       expect(cards.find(c => c.content === 'banana')).toBeDefined();
@@ -169,12 +169,12 @@ describe('Tag-Based Deck Selection', () => {
     });
     
     test('should get only untagged cards when requested', async () => {
-      const cards = db.getAllFlashCards({ 
-        sourceLanguage: 'en', 
+      const cards = await db.getAllFlashCards({
+        sourceLanguage: 'en',
         includeUntagged: true,
         tags: []
       });
-      
+
       expect(cards.length).toBe(2);
       expect(cards.find(c => c.content === 'car')).toBeDefined();
       expect(cards.find(c => c.content === 'table')).toBeDefined();

@@ -26,59 +26,87 @@ class FlashCardRepository {
   /**
    * Save a flashcard to the database
    * @param {FlashCard} flashcard - The flashcard to save
-   * @returns {FlashCard} - The saved flashcard
+   * @returns {Promise<FlashCard>} - Promise that resolves to the saved flashcard
    */
   saveFlashCard(flashcard) {
     if (!this.initialized) {
-      throw new Error('Database not initialized');
+      return Promise.reject(new Error('Database not initialized'));
     }
 
-    const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO flashcards (
-        id, content, sourceLanguage, comment, userTranslation, tags, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+    return new Promise((resolve, reject) => {
+      const json = flashcard.toJSON();
+      const query = `
+        INSERT OR REPLACE INTO flashcards (
+          id, content, sourceLanguage, comment, userTranslation, tags, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `;
 
-    const json = flashcard.toJSON();
+      console.log('Saving flashcard with id:', json.id);
 
-    stmt.run(
-      json.id,
-      json.content,
-      json.sourceLanguage,
-      json.comment,
-      json.userTranslation,
-      JSON.stringify(json.tags),
-      json.createdAt,
-      json.updatedAt
-    );
+      this.db.run(
+        query,
+        [
+          json.id,
+          json.content,
+          json.sourceLanguage,
+          json.comment,
+          json.userTranslation,
+          JSON.stringify(json.tags),
+          json.createdAt,
+          json.updatedAt
+        ],
+        (err) => {
+          if (err) {
+            console.error('Error saving flashcard:', err);
+            reject(err);
+            return;
+          }
 
-    return flashcard;
+          console.log('Flashcard saved successfully:', json.id);
+          resolve(flashcard);
+        }
+      );
+    });
   }
 
   /**
    * Get a flashcard by its ID
    * @param {string} id - The flashcard ID
-   * @returns {FlashCard|null} - The flashcard or null if not found
+   * @returns {Promise<FlashCard|null>} - Promise resolving to the flashcard or null if not found
    */
   getFlashCard(id) {
     if (!this.initialized) {
-      throw new Error('Database not initialized');
+      return Promise.reject(new Error('Database not initialized'));
     }
 
     if (isEmpty(id)) {
-      return null;
+      return Promise.resolve(null);
     }
 
-    const stmt = this.db.prepare('SELECT * FROM flashcards WHERE id = ?');
-    const row = stmt.get(id);
+    return new Promise((resolve, reject) => {
+      this.db.get('SELECT * FROM flashcards WHERE id = ?', [id], (err, row) => {
+        if (err) {
+          console.error('Error getting flashcard:', err);
+          reject(err);
+          return;
+        }
 
-    if (!row) {
-      return null;
-    }
+        if (!row) {
+          resolve(null);
+          return;
+        }
 
-    return FlashCard.fromJSON({
-      ...row,
-      tags: JSON.parse(row.tags || '[]')
+        try {
+          const flashcard = FlashCard.fromJSON({
+            ...row,
+            tags: row.tags ? JSON.parse(row.tags) : []
+          });
+          resolve(flashcard);
+        } catch (parseError) {
+          console.error('Error parsing flashcard data:', parseError);
+          reject(parseError);
+        }
+      });
     });
   }
 
@@ -92,11 +120,11 @@ class FlashCardRepository {
    * @param {string} [options.searchTerm] - Search in content or comments
    * @param {number} [options.limit] - Maximum number of results
    * @param {number} [options.offset] - Results offset
-   * @returns {FlashCard[]} - Array of flashcards
+   * @returns {Promise<FlashCard[]>} - Promise that resolves to an array of flashcards
    */
   getAllFlashCards(options = {}) {
     if (!this.initialized) {
-      throw new Error('Database not initialized');
+      return Promise.reject(new Error('Database not initialized'));
     }
 
     // Handle multiple filtering options for tags
@@ -164,33 +192,64 @@ class FlashCardRepository {
       }
     }
 
-    const stmt = this.db.prepare(query);
-    const rows = stmt.all(...params);
+    return new Promise((resolve, reject) => {
+      console.log('Running getAllFlashCards query:', query, params);
+      this.db.all(query, params, (err, rows) => {
+        if (err) {
+          console.error('Error getting flashcards:', err);
+          reject(err);
+          return;
+        }
 
-    return rows.map(row => FlashCard.fromJSON({
-      ...row,
-      tags: JSON.parse(row.tags || '[]')
-    }));
+        if (!rows || rows.length === 0) {
+          console.log('No flashcards found');
+          resolve([]);
+          return;
+        }
+
+        try {
+          const flashcards = rows.map(row => {
+            return FlashCard.fromJSON({
+              ...row,
+              tags: row.tags ? JSON.parse(row.tags) : []
+            });
+          });
+          console.log(`Found ${flashcards.length} flashcards`);
+          resolve(flashcards);
+        } catch (parseError) {
+          console.error('Error parsing flashcard data:', parseError);
+          reject(parseError);
+        }
+      });
+    });
   }
 
   /**
    * Delete a flashcard by its ID
    * @param {string} id - The flashcard ID
-   * @returns {boolean} - True if successful
+   * @returns {Promise<boolean>} - Promise resolving to true if successful
    */
   deleteFlashCard(id) {
     if (!this.initialized) {
-      throw new Error('Database not initialized');
+      return Promise.reject(new Error('Database not initialized'));
     }
 
     if (isEmpty(id)) {
-      return false;
+      return Promise.resolve(false);
     }
 
-    const stmt = this.db.prepare('DELETE FROM flashcards WHERE id = ?');
-    const result = stmt.run(id);
+    return new Promise((resolve, reject) => {
+      this.db.run('DELETE FROM flashcards WHERE id = ?', [id], function(err) {
+        if (err) {
+          console.error('Error deleting flashcard:', err);
+          reject(err);
+          return;
+        }
 
-    return result.changes > 0;
+        // this.changes refers to the number of rows affected by the query
+        resolve(this.changes > 0);
+      });
+    });
   }
 }
 

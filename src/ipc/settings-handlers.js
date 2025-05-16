@@ -15,7 +15,8 @@ function registerSettingsHandlers(db, errorHandler, mainWindow) {
     try {
       const Settings = require('../models/Settings');
       const settings = new Settings(settingsData);
-      return db.saveSettings(settings).toJSON();
+      const savedSettings = await db.saveSettings(settings);
+      return savedSettings.toJSON();
     } catch (error) {
       const errorInfo = errorHandler.handleException(
         mainWindow,
@@ -30,7 +31,7 @@ function registerSettingsHandlers(db, errorHandler, mainWindow) {
   // Get settings
   ipcMain.handle('settings:get', async (event) => {
     try {
-      const settings = db.getSettings();
+      const settings = await db.getSettings();
       return settings.toJSON();
     } catch (error) {
       const errorInfo = errorHandler.handleException(

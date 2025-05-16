@@ -2,19 +2,37 @@
  * Tests for database IPC handlers in main.js
  */
 
-// Mock better-sqlite3
-jest.mock('better-sqlite3', () => {
+// Mock sqlite3
+jest.mock('sqlite3', () => {
   const mockDb = {
-    prepare: jest.fn().mockReturnValue({
-      all: jest.fn().mockReturnValue([]),
-      get: jest.fn(),
-      run: jest.fn().mockReturnValue({ changes: 0 })
+    run: jest.fn((query, params, callback) => {
+      if (callback) callback(null);
+      return { changes: 0 };
     }),
-    exec: jest.fn(),
-    close: jest.fn(),
-    pragma: jest.fn()
+    get: jest.fn((query, params, callback) => {
+      if (callback) callback(null, {});
+    }),
+    all: jest.fn((query, params, callback) => {
+      if (callback) callback(null, []);
+    }),
+    close: jest.fn((callback) => {
+      if (callback) callback(null);
+    }),
+    serialize: jest.fn(fn => fn()),
+    parallelize: jest.fn(fn => fn())
   };
-  return jest.fn(() => mockDb);
+
+  return {
+    verbose: jest.fn().mockReturnValue({
+      Database: jest.fn().mockImplementation((path, mode, callback) => {
+        if (callback) callback(null);
+        return mockDb;
+      }),
+      OPEN_READWRITE: 1,
+      OPEN_CREATE: 2,
+      MEMORY: ':memory:'
+    })
+  };
 });
 
 // Mock electron before importing
