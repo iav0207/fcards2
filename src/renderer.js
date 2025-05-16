@@ -625,6 +625,7 @@ class FlashCardsApp {
     
     // Practice screen
     document.getElementById('submit-answer-btn').addEventListener('click', () => this.submitAnswer());
+    document.getElementById('cancel-session-btn').addEventListener('click', () => this.cancelSession());
     
     // Feedback screen
     document.getElementById('next-card-btn').addEventListener('click', () => this.nextCard());
@@ -855,13 +856,31 @@ class FlashCardsApp {
       
       // Update UI
       document.getElementById('card-content').textContent = cardData.card.content;
-      
+
       // Update progress
       const progressPercent = (cardData.sessionProgress.current / cardData.sessionProgress.total) * 100;
       document.getElementById('session-progress').style.width = `${progressPercent}%`;
-      
+
+      // Display card tags if available
+      const tagsContainer = document.getElementById('card-tags');
+      tagsContainer.innerHTML = '';
+
+      if (cardData.card.tags && cardData.card.tags.length > 0) {
+        cardData.card.tags.forEach(tag => {
+          const tagElement = document.createElement('span');
+          tagElement.className = 'card-tag';
+          tagElement.textContent = tag;
+          tagsContainer.appendChild(tagElement);
+        });
+      }
+
       // Clear the input
       document.getElementById('translation-input').value = '';
+
+      // Focus the input field for immediate typing
+      setTimeout(() => {
+        document.getElementById('translation-input').focus();
+      }, 100);
     } catch (error) {
       console.error('Error loading current card:', error);
       this.notificationSystem.error(
@@ -968,6 +987,31 @@ class FlashCardsApp {
     }
   }
   
+  cancelSession() {
+    if (!this.state.sessionId) {
+      this.notificationSystem.warning(
+        'No Active Session',
+        'There is no active session to cancel.'
+      );
+      return;
+    }
+
+    // Show confirmation dialog
+    if (confirm('Are you sure you want to cancel this practice session? Your progress will not be saved.')) {
+      // Reset session state
+      this.state.sessionId = null;
+      this.state.currentCard = null;
+
+      // Navigate back to home screen
+      this.showScreen('home');
+
+      this.notificationSystem.info(
+        'Session Cancelled',
+        'Practice session has been cancelled.'
+      );
+    }
+  }
+
   async showResults() {
     try {
       const stats = await window.flashcards.getSessionStats(this.state.sessionId);
