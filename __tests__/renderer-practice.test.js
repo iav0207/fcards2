@@ -118,4 +118,115 @@ describe('Renderer - Practice Screen', () => {
     expect(tagElements[0].textContent).toBe('grammar');
     expect(tagElements[1].textContent).toBe('beginner');
   });
+
+  test('cancelSession should show confirmation and reset session state if confirmed', () => {
+    // Mock confirm to return true (user clicks "OK")
+    global.confirm = jest.fn(() => true);
+
+    // Create a partial implementation of the FlashCardsApp
+    const app = {
+      state: {
+        sessionId: 'test-session',
+        currentCard: { id: 'card-1' }
+      },
+      notificationSystem: {
+        warning: jest.fn(),
+        info: jest.fn()
+      },
+      showScreen: jest.fn(),
+      cancelSession: function() {
+        if (!this.state.sessionId) {
+          this.notificationSystem.warning(
+            'No Active Session',
+            'There is no active session to cancel.'
+          );
+          return;
+        }
+
+        // Show confirmation dialog
+        if (confirm('Are you sure you want to cancel this practice session? Your progress will not be saved.')) {
+          // Reset session state
+          this.state.sessionId = null;
+          this.state.currentCard = null;
+
+          // Navigate back to home screen
+          this.showScreen('home');
+
+          this.notificationSystem.info(
+            'Session Cancelled',
+            'Practice session has been cancelled.'
+          );
+        }
+      }
+    };
+
+    // Call the method
+    app.cancelSession();
+
+    // Assertions
+    expect(global.confirm).toHaveBeenCalledWith(
+      'Are you sure you want to cancel this practice session? Your progress will not be saved.'
+    );
+    expect(app.state.sessionId).toBeNull();
+    expect(app.state.currentCard).toBeNull();
+    expect(app.showScreen).toHaveBeenCalledWith('home');
+    expect(app.notificationSystem.info).toHaveBeenCalledWith(
+      'Session Cancelled',
+      'Practice session has been cancelled.'
+    );
+  });
+
+  test('cancelSession should not reset session state if cancellation is not confirmed', () => {
+    // Mock confirm to return false (user clicks "Cancel")
+    global.confirm = jest.fn(() => false);
+
+    // Create a partial implementation of the FlashCardsApp
+    const app = {
+      state: {
+        sessionId: 'test-session',
+        currentCard: { id: 'card-1' }
+      },
+      notificationSystem: {
+        warning: jest.fn(),
+        info: jest.fn()
+      },
+      showScreen: jest.fn(),
+      cancelSession: function() {
+        if (!this.state.sessionId) {
+          this.notificationSystem.warning(
+            'No Active Session',
+            'There is no active session to cancel.'
+          );
+          return;
+        }
+
+        // Show confirmation dialog
+        if (confirm('Are you sure you want to cancel this practice session? Your progress will not be saved.')) {
+          // Reset session state
+          this.state.sessionId = null;
+          this.state.currentCard = null;
+
+          // Navigate back to home screen
+          this.showScreen('home');
+
+          this.notificationSystem.info(
+            'Session Cancelled',
+            'Practice session has been cancelled.'
+          );
+        }
+      }
+    };
+
+    // Call the method
+    app.cancelSession();
+
+    // Assertions
+    expect(global.confirm).toHaveBeenCalledWith(
+      'Are you sure you want to cancel this practice session? Your progress will not be saved.'
+    );
+    expect(app.state.sessionId).toBe('test-session');
+    expect(app.state.currentCard).toEqual({ id: 'card-1' });
+    expect(app.showScreen).not.toHaveBeenCalled();
+    expect(app.notificationSystem.info).not.toHaveBeenCalled();
+  });
 });

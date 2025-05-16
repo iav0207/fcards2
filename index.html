@@ -83,6 +83,26 @@
       cursor: not-allowed;
     }
 
+    button.primary-button {
+      background-color: #90caf9;
+      color: #121212;
+      font-weight: bold;
+    }
+
+    button.primary-button:hover {
+      background-color: #64b5f6;
+    }
+
+    button.secondary-button {
+      background-color: #424242;
+      color: #ffffff;
+      border: 1px solid #555;
+    }
+
+    button.secondary-button:hover {
+      background-color: #616161;
+    }
+
     .button-container {
       display: flex;
       gap: 10px;
@@ -638,8 +658,8 @@
         </div>
       </div>
       <div class="button-container">
-        <button id="back-to-home-btn">Back</button>
-        <button id="create-session-btn">Start Session</button>
+        <button id="back-to-home-btn" class="secondary-button">Back</button>
+        <button id="create-session-btn" class="primary-button">Start Session</button>
       </div>
     </div>
 
@@ -657,7 +677,8 @@
         <textarea id="translation-input" placeholder="Type your translation here..."></textarea>
       </div>
       <div class="button-container">
-        <button id="submit-answer-btn">Submit Answer</button>
+        <button id="submit-answer-btn" class="primary-button">Submit Answer</button>
+        <button id="cancel-session-btn" class="secondary-button">Cancel Session</button>
       </div>
     </div>
 

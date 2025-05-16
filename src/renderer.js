@@ -625,6 +625,7 @@ class FlashCardsApp {
     
     // Practice screen
     document.getElementById('submit-answer-btn').addEventListener('click', () => this.submitAnswer());
+    document.getElementById('cancel-session-btn').addEventListener('click', () => this.cancelSession());
     
     // Feedback screen
     document.getElementById('next-card-btn').addEventListener('click', () => this.nextCard());
@@ -986,6 +987,31 @@ class FlashCardsApp {
     }
   }
   
+  cancelSession() {
+    if (!this.state.sessionId) {
+      this.notificationSystem.warning(
+        'No Active Session',
+        'There is no active session to cancel.'
+      );
+      return;
+    }
+
+    // Show confirmation dialog
+    if (confirm('Are you sure you want to cancel this practice session? Your progress will not be saved.')) {
+      // Reset session state
+      this.state.sessionId = null;
+      this.state.currentCard = null;
+
+      // Navigate back to home screen
+      this.showScreen('home');
+
+      this.notificationSystem.info(
+        'Session Cancelled',
+        'Practice session has been cancelled.'
+      );
+    }
+  }
+
   async showResults() {
     try {
       const stats = await window.flashcards.getSessionStats(this.state.sessionId);
