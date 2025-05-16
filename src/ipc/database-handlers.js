@@ -33,7 +33,8 @@ function registerDatabaseHandlers(db, errorHandler, mainWindow, app) {
     try {
       const FlashCard = require('../models/FlashCard');
       const card = new FlashCard(cardData);
-      return db.saveFlashCard(card).toJSON();
+      const savedCard = await db.saveFlashCard(card);
+      return savedCard.toJSON();
     } catch (error) {
       const errorInfo = errorHandler.handleException(
         mainWindow,
@@ -47,7 +48,7 @@ function registerDatabaseHandlers(db, errorHandler, mainWindow, app) {
 
   ipcMain.handle('flashcard:get', async (event, id) => {
     try {
-      const card = db.getFlashCard(id);
+      const card = await db.getFlashCard(id);
       return card ? card.toJSON() : null;
     } catch (error) {
       const errorInfo = errorHandler.handleException(
@@ -62,7 +63,7 @@ function registerDatabaseHandlers(db, errorHandler, mainWindow, app) {
 
   ipcMain.handle('flashcard:getAll', async (event, options) => {
     try {
-      const cards = db.getAllFlashCards(options);
+      const cards = await db.getAllFlashCards(options);
       return cards.map(card => card.toJSON());
     } catch (error) {
       const errorInfo = errorHandler.handleException(
@@ -77,7 +78,7 @@ function registerDatabaseHandlers(db, errorHandler, mainWindow, app) {
 
   ipcMain.handle('flashcard:delete', async (event, id) => {
     try {
-      return db.deleteFlashCard(id);
+      return await db.deleteFlashCard(id);
     } catch (error) {
       const errorInfo = errorHandler.handleException(
         mainWindow,
@@ -94,7 +95,8 @@ function registerDatabaseHandlers(db, errorHandler, mainWindow, app) {
     try {
       const Session = require('../models/Session');
       const session = new Session(sessionData);
-      return db.saveSession(session).toJSON();
+      const savedSession = await db.saveSession(session);
+      return savedSession.toJSON();
     } catch (error) {
       const errorInfo = errorHandler.handleException(
         mainWindow,
@@ -108,7 +110,7 @@ function registerDatabaseHandlers(db, errorHandler, mainWindow, app) {
 
   ipcMain.handle('session:get', async (event, id) => {
     try {
-      const session = db.getSession(id);
+      const session = await db.getSession(id);
       return session ? session.toJSON() : null;
     } catch (error) {
       const errorInfo = errorHandler.handleException(
@@ -123,7 +125,7 @@ function registerDatabaseHandlers(db, errorHandler, mainWindow, app) {
 
   ipcMain.handle('session:getAll', async (event, options) => {
     try {
-      const sessions = db.getAllSessions(options);
+      const sessions = await db.getAllSessions(options);
       return sessions.map(session => session.toJSON());
     } catch (error) {
       const errorInfo = errorHandler.handleException(
@@ -138,7 +140,7 @@ function registerDatabaseHandlers(db, errorHandler, mainWindow, app) {
 
   ipcMain.handle('session:delete', async (event, id) => {
     try {
-      return db.deleteSession(id);
+      return await db.deleteSession(id);
     } catch (error) {
       const errorInfo = errorHandler.handleException(
         mainWindow,
@@ -153,7 +155,7 @@ function registerDatabaseHandlers(db, errorHandler, mainWindow, app) {
   // Database operations
   ipcMain.handle('database:stats', async (event) => {
     try {
-      return db.getStats();
+      return await db.getStats();
     } catch (error) {
       const errorInfo = errorHandler.handleException(
         mainWindow,
@@ -168,7 +170,7 @@ function registerDatabaseHandlers(db, errorHandler, mainWindow, app) {
   ipcMain.handle('database:export', async (event, options = {}) => {
     try {
       // Get the data to export
-      const data = db.exportData();
+      const data = await db.exportData();
 
       // Add metadata
       const exportData = {
@@ -251,7 +253,7 @@ function registerDatabaseHandlers(db, errorHandler, mainWindow, app) {
       // TODO: Implement database clear method in DatabaseService
 
       // Import the data
-      const result = db.importData(importData.data);
+      const result = await db.importData(importData.data);
 
       return {
         success: true,

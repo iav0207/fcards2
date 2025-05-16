@@ -26,61 +26,89 @@ class SessionRepository {
   /**
    * Save a session to the database
    * @param {Session} session - The session to save
-   * @returns {Session} - The saved session
+   * @returns {Promise<Session>} - Promise that resolves to the saved session
    */
   saveSession(session) {
     if (!this.initialized) {
-      throw new Error('Database not initialized');
+      return Promise.reject(new Error('Database not initialized'));
     }
 
-    const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO sessions (
-        id, sourceLanguage, targetLanguage, cardIds, currentCardIndex,
-        responses, createdAt, completedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+    return new Promise((resolve, reject) => {
+      const json = session.toJSON();
+      const query = `
+        INSERT OR REPLACE INTO sessions (
+          id, sourceLanguage, targetLanguage, cardIds, currentCardIndex,
+          responses, createdAt, completedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `;
 
-    const json = session.toJSON();
+      console.log('Saving session with id:', json.id);
 
-    stmt.run(
-      json.id,
-      json.sourceLanguage,
-      json.targetLanguage,
-      JSON.stringify(json.cardIds),
-      json.currentCardIndex,
-      JSON.stringify(json.responses),
-      json.createdAt,
-      json.completedAt
-    );
+      this.db.run(
+        query,
+        [
+          json.id,
+          json.sourceLanguage,
+          json.targetLanguage,
+          JSON.stringify(json.cardIds),
+          json.currentCardIndex,
+          JSON.stringify(json.responses),
+          json.createdAt,
+          json.completedAt
+        ],
+        (err) => {
+          if (err) {
+            console.error('Error saving session:', err);
+            reject(err);
+            return;
+          }
 
-    return session;
+          console.log('Session saved successfully:', json.id);
+          resolve(session);
+        }
+      );
+    });
   }
 
   /**
    * Get a session by its ID
    * @param {string} id - The session ID
-   * @returns {Session|null} - The session or null if not found
+   * @returns {Promise<Session|null>} - Promise that resolves to the session or null if not found
    */
   getSession(id) {
     if (!this.initialized) {
-      throw new Error('Database not initialized');
+      return Promise.reject(new Error('Database not initialized'));
     }
 
     if (isEmpty(id)) {
-      return null;
+      return Promise.resolve(null);
     }
 
-    const stmt = this.db.prepare('SELECT * FROM sessions WHERE id = ?');
-    const row = stmt.get(id);
+    return new Promise((resolve, reject) => {
+      this.db.get('SELECT * FROM sessions WHERE id = ?', [id], (err, row) => {
+        if (err) {
+          console.error('Error getting session:', err);
+          reject(err);
+          return;
+        }
 
-    if (!row) {
-      return null;
-    }
+        if (!row) {
+          resolve(null);
+          return;
+        }
 
-    return Session.fromJSON({
-      ...row,
-      cardIds: JSON.parse(row.cardIds || '[]'),
-      responses: JSON.parse(row.responses || '[]')
+        try {
+          const session = Session.fromJSON({
+            ...row,
+            cardIds: JSON.parse(row.cardIds || '[]'),
+            responses: JSON.parse(row.responses || '[]')
+          });
+          resolve(session);
+        } catch (parseError) {
+          console.error('Error parsing session data:', parseError);
+          reject(parseError);
+        }
+      });
     });
   }
 
@@ -91,69 +119,100 @@ class SessionRepository {
    * @param {boolean} [options.completedOnly] - Only completed sessions
    * @param {number} [options.limit] - Maximum number of results
    * @param {number} [options.offset] - Results offset
-   * @returns {Session[]} - Array of sessions
+   * @returns {Promise<Session[]>} - Promise that resolves to an array of sessions
    */
   getAllSessions(options = {}) {
     if (!this.initialized) {
-      throw new Error('Database not initialized');
+      return Promise.reject(new Error('Database not initialized'));
     }
 
-    let query = 'SELECT * FROM sessions';
-    const params = [];
-    const conditions = [];
+    return new Promise((resolve, reject) => {
+      let query = 'SELECT * FROM sessions';
+      const params = [];
+      const conditions = [];
 
-    if (options.activeOnly) {
-      conditions.push('completedAt IS NULL');
-    }
-
-    if (options.completedOnly) {
-      conditions.push('completedAt IS NOT NULL');
-    }
-
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
-    }
-
-    query += ' ORDER BY createdAt DESC';
-
-    if (options.limit) {
-      query += ' LIMIT ?';
-      params.push(options.limit);
-
-      if (options.offset) {
-        query += ' OFFSET ?';
-        params.push(options.offset);
+      if (options.activeOnly) {
+        conditions.push('completedAt IS NULL');
       }
-    }
 
-    const stmt = this.db.prepare(query);
-    const rows = stmt.all(...params);
+      if (options.completedOnly) {
+        conditions.push('completedAt IS NOT NULL');
+      }
 
-    return rows.map(row => Session.fromJSON({
-      ...row,
-      cardIds: JSON.parse(row.cardIds || '[]'),
-      responses: JSON.parse(row.responses || '[]')
-    }));
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+      }
+
+      query += ' ORDER BY createdAt DESC';
+
+      if (options.limit) {
+        query += ' LIMIT ?';
+        params.push(options.limit);
+
+        if (options.offset) {
+          query += ' OFFSET ?';
+          params.push(options.offset);
+        }
+      }
+
+      console.log('Running getAllSessions query:', query);
+      this.db.all(query, params, (err, rows) => {
+        if (err) {
+          console.error('Error getting sessions:', err);
+          reject(err);
+          return;
+        }
+
+        if (!rows || rows.length === 0) {
+          console.log('No sessions found');
+          resolve([]);
+          return;
+        }
+
+        try {
+          const sessions = rows.map(row => {
+            // Ensure the row has all required properties
+            return Session.fromJSON({
+              ...row,
+              cardIds: row.cardIds ? JSON.parse(row.cardIds) : [],
+              responses: row.responses ? JSON.parse(row.responses) : []
+            });
+          });
+          resolve(sessions);
+        } catch (parseError) {
+          console.error('Error parsing session data:', parseError);
+          reject(parseError);
+        }
+      });
+    });
   }
 
   /**
    * Delete a session by its ID
    * @param {string} id - The session ID
-   * @returns {boolean} - True if successful
+   * @returns {Promise<boolean>} - Promise that resolves to true if successful
    */
   deleteSession(id) {
     if (!this.initialized) {
-      throw new Error('Database not initialized');
+      return Promise.reject(new Error('Database not initialized'));
     }
 
     if (isEmpty(id)) {
-      return false;
+      return Promise.resolve(false);
     }
 
-    const stmt = this.db.prepare('DELETE FROM sessions WHERE id = ?');
-    const result = stmt.run(id);
+    return new Promise((resolve, reject) => {
+      this.db.run('DELETE FROM sessions WHERE id = ?', [id], function(err) {
+        if (err) {
+          console.error('Error deleting session:', err);
+          reject(err);
+          return;
+        }
 
-    return result.changes > 0;
+        // 'this' context contains information about the operation
+        resolve(this.changes > 0);
+      });
+    });
   }
 }
 

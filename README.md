@@ -14,8 +14,9 @@ A desktop application for language learning using a flashcard system. Built with
 
 ### Prerequisites
 
-- Node.js (v18+)
+- Node.js 18.17.1 (specifically this version for compatibility with Electron 27)
 - npm or yarn
+- Python 3.x with setuptools installed (for native module compilation)
 
 ### Setup
 

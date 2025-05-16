@@ -1,255 +1,245 @@
 /**
- * Tests for FlashCardRepository
+ * Tests for FlashCardRepository using real in-memory SQLite
  */
+const sqlite3 = require('sqlite3').verbose();
 const FlashCardRepository = require('../../src/repositories/FlashCardRepository');
 const FlashCard = require('../../src/models/FlashCard');
 
-// Mock database
-const mockDb = {
-  prepare: jest.fn(),
-};
-
-// Mock prepared statement
-const mockStmt = {
-  run: jest.fn(),
-  get: jest.fn(),
-  all: jest.fn(),
-};
-
-describe('FlashCardRepository', () => {
-  let repository;
-
-  beforeEach(() => {
-    // Reset mocks
-    mockDb.prepare.mockReset();
-    mockStmt.run.mockReset();
-    mockStmt.get.mockReset();
-    mockStmt.all.mockReset();
-
-    // Mock prepare to return our mock statement
-    mockDb.prepare.mockReturnValue(mockStmt);
-
-    // Create repository with initialized state
-    repository = new FlashCardRepository(mockDb, true);
+// Helper function to setup an in-memory database
+function setupDatabase() {
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(':memory:', (err) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      
+      // Create the flashcards table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS flashcards (
+          id TEXT PRIMARY KEY,
+          content TEXT NOT NULL,
+          sourceLanguage TEXT NOT NULL,
+          comment TEXT,
+          userTranslation TEXT,
+          tags TEXT,
+          createdAt TEXT NOT NULL,
+          updatedAt TEXT NOT NULL
+        )
+      `, (err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(db);
+      });
+    });
   });
+}
 
+describe('FlashCardRepository with in-memory SQLite', () => {
+  let db;
+  let repository;
+  
+  // Setup database before tests
+  beforeAll(async () => {
+    db = await setupDatabase();
+    repository = new FlashCardRepository(db, true);
+  });
+  
+  // Close database after tests
+  afterAll((done) => {
+    if (db) {
+      db.close(() => {
+        done();
+      });
+    } else {
+      done();
+    }
+  });
+  
+  // Clear the table before each test
+  beforeEach((done) => {
+    db.run('DELETE FROM flashcards', (err) => {
+      if (err) {
+        console.error('Error clearing flashcards table:', err);
+      }
+      done();
+    });
+  });
+  
   describe('saveFlashCard', () => {
-    test('should save a flashcard to the database', () => {
+    it('should save a flashcard to the database', async () => {
       // Create a test flashcard
+      const testId = 'test-id-' + Date.now();
       const flashcard = new FlashCard({
-        id: 'test-id',
+        id: testId,
         content: 'Test content',
         sourceLanguage: 'en',
         tags: ['test', 'example']
       });
-
-      // Mock successful run
-      mockStmt.run.mockReturnValue({ changes: 1 });
-
+      
       // Save the flashcard
-      const result = repository.saveFlashCard(flashcard);
-
-      // Check that prepare was called with the correct SQL
-      expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('INSERT OR REPLACE INTO flashcards'));
-
-      // Check that run was called with the correct parameters
-      expect(mockStmt.run).toHaveBeenCalledWith(
-        flashcard.id,
-        flashcard.content,
-        flashcard.sourceLanguage,
-        flashcard.comment,
-        flashcard.userTranslation,
-        JSON.stringify(flashcard.tags),
-        expect.any(String), // createdAt as string
-        expect.any(String)  // updatedAt as string
-      );
-
-      // Check that the flashcard was returned
-      expect(result).toBe(flashcard);
+      const result = await repository.saveFlashCard(flashcard);
+      
+      // Verify the flashcard was returned correctly
+      expect(result).toEqual(flashcard);
+      
+      // Verify it was saved to the database by retrieving it
+      const retrieved = await repository.getFlashCard(testId);
+      expect(retrieved.id).toBe(testId);
+      expect(retrieved.content).toBe('Test content');
+      expect(retrieved.sourceLanguage).toBe('en');
+      expect(retrieved.tags).toEqual(['test', 'example']);
     });
-
-    test('should throw an error if database is not initialized', () => {
-      // Create repository with uninitialized state
-      const uninitializedRepo = new FlashCardRepository(mockDb, false);
-
-      // Create a test flashcard
+    
+    it('should update an existing flashcard', async () => {
+      // Create and save a flashcard
+      const testId = 'update-test-id-' + Date.now();
       const flashcard = new FlashCard({
-        content: 'Test content',
+        id: testId,
+        content: 'Original content',
+        sourceLanguage: 'en',
+        tags: ['original']
+      });
+      
+      await repository.saveFlashCard(flashcard);
+      
+      // Update the flashcard
+      flashcard.update({
+        content: 'Updated content',
+        tags: ['updated', 'modified']
+      });
+      
+      // Save the updated flashcard
+      await repository.saveFlashCard(flashcard);
+      
+      // Verify the update was saved
+      const retrieved = await repository.getFlashCard(testId);
+      expect(retrieved.content).toBe('Updated content');
+      expect(retrieved.tags).toEqual(['updated', 'modified']);
+    });
+  });
+  
+  describe('getFlashCard', () => {
+    it('should return null for non-existent flashcard', async () => {
+      const result = await repository.getFlashCard('non-existent-id');
+      expect(result).toBeNull();
+    });
+    
+    it('should retrieve a flashcard by id', async () => {
+      // Create and save a flashcard
+      const testId = 'get-test-id-' + Date.now();
+      const flashcard = new FlashCard({
+        id: testId,
+        content: 'Get test content',
+        sourceLanguage: 'en',
+        comment: 'Test comment',
+        tags: ['get', 'test']
+      });
+      
+      await repository.saveFlashCard(flashcard);
+      
+      // Retrieve the flashcard
+      const result = await repository.getFlashCard(testId);
+      
+      // Verify the result
+      expect(result).not.toBeNull();
+      expect(result.id).toBe(testId);
+      expect(result.content).toBe('Get test content');
+      expect(result.comment).toBe('Test comment');
+      expect(result.tags).toEqual(['get', 'test']);
+    });
+  });
+  
+  describe('getAllFlashCards', () => {
+    beforeEach(async () => {
+      // Create some test flashcards
+      const cards = [
+        new FlashCard({
+          content: 'Card One',
+          sourceLanguage: 'en',
+          tags: ['common', 'greeting']
+        }),
+        new FlashCard({
+          content: 'Card Two',
+          sourceLanguage: 'en',
+          tags: ['common', 'farewell']
+        }),
+        new FlashCard({
+          content: 'Carte Trois',
+          sourceLanguage: 'fr',
+          tags: ['common']
+        }),
+        new FlashCard({
+          content: 'Untagged Card',
+          sourceLanguage: 'en'
+        })
+      ];
+      
+      // Save all flashcards
+      for (const card of cards) {
+        await repository.saveFlashCard(card);
+      }
+    });
+    
+    it('should retrieve all flashcards', async () => {
+      const result = await repository.getAllFlashCards();
+      expect(result.length).toBe(4);
+    });
+    
+    it('should filter by source language', async () => {
+      const result = await repository.getAllFlashCards({ sourceLanguage: 'en' });
+      expect(result.length).toBe(3);
+      expect(result.every(card => card.sourceLanguage === 'en')).toBe(true);
+    });
+    
+    it('should filter by tags', async () => {
+      const result = await repository.getAllFlashCards({ tags: ['common'] });
+      expect(result.length).toBe(3);
+      expect(result.every(card => card.tags.includes('common'))).toBe(true);
+    });
+    
+    it('should handle multiple tag filters', async () => {
+      const result = await repository.getAllFlashCards({ tags: ['greeting', 'farewell'] });
+      expect(result.length).toBe(2);
+    });
+    
+    it('should filter for untagged cards', async () => {
+      const result = await repository.getAllFlashCards({ includeUntagged: true, tags: [] });
+      const untaggedCards = result.filter(card => !card.tags || card.tags.length === 0);
+      expect(untaggedCards.length).toBe(1);
+    });
+  });
+  
+  describe('deleteFlashCard', () => {
+    it('should delete a flashcard from the database', async () => {
+      // Create and save a flashcard
+      const testId = 'delete-test-id-' + Date.now();
+      const flashcard = new FlashCard({
+        id: testId,
+        content: 'Delete me',
         sourceLanguage: 'en'
       });
-
-      // Expect error when trying to save
-      expect(() => {
-        uninitializedRepo.saveFlashCard(flashcard);
-      }).toThrow('Database not initialized');
-    });
-  });
-
-  describe('getFlashCard', () => {
-    test('should retrieve a flashcard by ID', () => {
-      // Mock database row return
-      const mockRow = {
-        id: 'test-id',
-        content: 'Test content',
-        sourceLanguage: 'en',
-        tags: '["test","example"]',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      mockStmt.get.mockReturnValue(mockRow);
-
-      // Get the flashcard
-      const result = repository.getFlashCard('test-id');
-
-      // Check that prepare was called with the correct SQL
-      expect(mockDb.prepare).toHaveBeenCalledWith('SELECT * FROM flashcards WHERE id = ?');
-
-      // Check that get was called with the correct ID
-      expect(mockStmt.get).toHaveBeenCalledWith('test-id');
-
-      // Check that a FlashCard instance was returned
-      expect(result).toBeInstanceOf(FlashCard);
-      expect(result.id).toBe('test-id');
-      expect(result.content).toBe('Test content');
-      expect(result.tags).toEqual(['test', 'example']);
-    });
-
-    test('should return null for empty ID', () => {
-      const result = repository.getFlashCard('');
-      expect(result).toBeNull();
-      expect(mockDb.prepare).not.toHaveBeenCalled();
-    });
-
-    test('should return null when no flashcard is found', () => {
-      mockStmt.get.mockReturnValue(null);
       
-      const result = repository.getFlashCard('non-existent-id');
+      await repository.saveFlashCard(flashcard);
       
-      expect(mockDb.prepare).toHaveBeenCalledWith('SELECT * FROM flashcards WHERE id = ?');
-      expect(mockStmt.get).toHaveBeenCalledWith('non-existent-id');
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('getAllFlashCards', () => {
-    test('should retrieve all flashcards with default options', () => {
-      // Mock database rows return
-      const mockRows = [
-        {
-          id: 'card1',
-          content: 'Card 1',
-          sourceLanguage: 'en',
-          tags: '["test"]',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: 'card2',
-          content: 'Card 2',
-          sourceLanguage: 'en',
-          tags: '["example"]',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      ];
-
-      mockStmt.all.mockReturnValue(mockRows);
-
-      // Get all flashcards
-      const result = repository.getAllFlashCards();
-
-      // Check that prepare was called with the correct SQL
-      expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('SELECT * FROM flashcards'));
-      expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('ORDER BY updatedAt DESC'));
-
-      // Check that all was called
-      expect(mockStmt.all).toHaveBeenCalled();
-
-      // Check that FlashCard instances were returned
-      expect(result).toHaveLength(2);
-      expect(result[0]).toBeInstanceOf(FlashCard);
-      expect(result[1]).toBeInstanceOf(FlashCard);
-      expect(result[0].id).toBe('card1');
-      expect(result[1].id).toBe('card2');
-    });
-
-    test('should filter by source language', () => {
-      mockStmt.all.mockReturnValue([]);
-
-      repository.getAllFlashCards({ sourceLanguage: 'en' });
-
-      // Check that prepare was called with a WHERE clause
-      expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('WHERE sourceLanguage = ?'));
-
-      // Check that all was called with the correct parameter
-      expect(mockStmt.all).toHaveBeenCalledWith('en');
-    });
-
-    test('should filter by tags', () => {
-      mockStmt.all.mockReturnValue([]);
-
-      repository.getAllFlashCards({ tags: ['test', 'example'] });
-
-      // Check that prepare was called with tags LIKE conditions
-      expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('WHERE (tags LIKE ? OR tags LIKE ?)'));
-
-      // Check that all was called with the correct parameters
-      expect(mockStmt.all).toHaveBeenCalledWith('%"test"%', '%"example"%');
-    });
-
-    test('should include untagged cards when requested', () => {
-      mockStmt.all.mockReturnValue([]);
-
-      repository.getAllFlashCards({ includeUntagged: true });
-
-      // Check that prepare was called with untagged condition
-      expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('WHERE ((tags IS NULL OR tags = ? OR tags = ?))'));
-
-      // Check that all was called with the correct parameters
-      expect(mockStmt.all).toHaveBeenCalledWith('[]', '');
-    });
-  });
-
-  describe('deleteFlashCard', () => {
-    test('should delete a flashcard by ID', () => {
-      // Mock successful deletion
-      mockStmt.run.mockReturnValue({ changes: 1 });
-
+      // Verify it was saved
+      const savedCard = await repository.getFlashCard(testId);
+      expect(savedCard).not.toBeNull();
+      
       // Delete the flashcard
-      const result = repository.deleteFlashCard('test-id');
-
-      // Check that prepare was called with the correct SQL
-      expect(mockDb.prepare).toHaveBeenCalledWith('DELETE FROM flashcards WHERE id = ?');
-
-      // Check that run was called with the correct ID
-      expect(mockStmt.run).toHaveBeenCalledWith('test-id');
-
-      // Check that true was returned (deletion successful)
+      const result = await repository.deleteFlashCard(testId);
       expect(result).toBe(true);
+      
+      // Verify it was deleted
+      const deletedCard = await repository.getFlashCard(testId);
+      expect(deletedCard).toBeNull();
     });
-
-    test('should return false when no flashcard is deleted', () => {
-      // Mock unsuccessful deletion
-      mockStmt.run.mockReturnValue({ changes: 0 });
-
-      // Delete the flashcard
-      const result = repository.deleteFlashCard('non-existent-id');
-
-      // Check that prepare was called with the correct SQL
-      expect(mockDb.prepare).toHaveBeenCalledWith('DELETE FROM flashcards WHERE id = ?');
-
-      // Check that run was called with the correct ID
-      expect(mockStmt.run).toHaveBeenCalledWith('non-existent-id');
-
-      // Check that false was returned (deletion unsuccessful)
+    
+    it('should return false when deleting non-existent flashcard', async () => {
+      const result = await repository.deleteFlashCard('non-existent-id');
       expect(result).toBe(false);
-    });
-
-    test('should return false for empty ID', () => {
-      const result = repository.deleteFlashCard('');
-      expect(result).toBe(false);
-      expect(mockDb.prepare).not.toHaveBeenCalled();
     });
   });
 });

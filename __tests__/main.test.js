@@ -75,9 +75,9 @@ describe('Application configuration', () => {
     expect(pkg.main).toBe('main.js');
   });
 
-  it('has better-sqlite3 as a dependency', () => {
+  it('has sqlite3 as a dependency', () => {
     const pkg = require('../package.json');
-    expect(pkg.dependencies['better-sqlite3']).toBeDefined();
+    expect(pkg.dependencies['sqlite3']).toBeDefined();
   });
 });
 

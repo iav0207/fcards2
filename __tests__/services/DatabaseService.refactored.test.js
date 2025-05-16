@@ -11,7 +11,34 @@ const Session = require('../../src/models/Session');
 const Settings = require('../../src/models/Settings');
 
 // Mock database and repositories
-jest.mock('better-sqlite3');
+jest.mock('sqlite3', () => {
+  // Create a mock for sqlite3.verbose() that returns another mock
+  const mockVerbose = jest.fn().mockReturnValue({
+    Database: jest.fn().mockImplementation((path, mode, callback) => {
+      if (callback) callback(null);
+      return {
+        run: jest.fn((query, params, callback) => {
+          if (callback) callback(null);
+        }),
+        get: jest.fn((query, params, callback) => {
+          if (callback) callback(null, {});
+        }),
+        all: jest.fn((query, params, callback) => {
+          if (callback) callback(null, []);
+        }),
+        close: jest.fn((callback) => {
+          if (callback) callback(null);
+        }),
+        serialize: jest.fn(fn => fn()),
+        parallelize: jest.fn(fn => fn())
+      };
+    }),
+    OPEN_READWRITE: 1,
+    OPEN_CREATE: 2,
+    MEMORY: ':memory:'
+  });
+  return { verbose: mockVerbose };
+});
 jest.mock('../../src/repositories/FlashCardRepository');
 jest.mock('../../src/repositories/SessionRepository');
 jest.mock('../../src/repositories/SettingsRepository');
