@@ -110,11 +110,30 @@
       width: 100%;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
       text-align: center;
+      position: relative;
     }
 
     .card-content {
       font-size: 24px;
       margin-bottom: 20px;
+    }
+
+    .card-tags {
+      position: absolute;
+      bottom: 8px;
+      right: 12px;
+      text-align: right;
+      max-width: 80%;
+    }
+
+    .card-tag {
+      display: inline-block;
+      font-size: 0.8em;
+      color: rgba(144, 202, 249, 0.8);
+      background: rgba(30, 30, 30, 0.6);
+      border-radius: 12px;
+      padding: 2px 8px;
+      margin: 0 2px;
     }
 
     .progress-bar {
@@ -631,6 +650,7 @@
       </div>
       <div class="card">
         <div class="card-content" id="card-content"></div>
+        <div class="card-tags" id="card-tags"></div>
       </div>
       <div class="form-group">
         <label for="translation-input">Your Translation:</label>

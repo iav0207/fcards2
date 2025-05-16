@@ -855,11 +855,24 @@ class FlashCardsApp {
       
       // Update UI
       document.getElementById('card-content').textContent = cardData.card.content;
-      
+
       // Update progress
       const progressPercent = (cardData.sessionProgress.current / cardData.sessionProgress.total) * 100;
       document.getElementById('session-progress').style.width = `${progressPercent}%`;
-      
+
+      // Display card tags if available
+      const tagsContainer = document.getElementById('card-tags');
+      tagsContainer.innerHTML = '';
+
+      if (cardData.card.tags && cardData.card.tags.length > 0) {
+        cardData.card.tags.forEach(tag => {
+          const tagElement = document.createElement('span');
+          tagElement.className = 'card-tag';
+          tagElement.textContent = tag;
+          tagsContainer.appendChild(tagElement);
+        });
+      }
+
       // Clear the input
       document.getElementById('translation-input').value = '';
 

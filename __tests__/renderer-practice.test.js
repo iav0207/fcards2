@@ -9,6 +9,7 @@ describe('Renderer - Practice Screen', () => {
     <div id="practice-screen">
       <div id="card-content"></div>
       <div id="session-progress"></div>
+      <div id="card-tags"></div>
       <input id="translation-input" type="text" />
     </div>
   `;
@@ -16,7 +17,10 @@ describe('Renderer - Practice Screen', () => {
   // Mocks for global objects
   window.flashcards = {
     getCurrentCard: jest.fn().mockResolvedValue({
-      card: { content: 'Test content' },
+      card: {
+        content: 'Test content',
+        tags: ['grammar', 'beginner']
+      },
       sessionProgress: { current: 1, total: 3 }
     })
   };
@@ -68,9 +72,22 @@ describe('Renderer - Practice Screen', () => {
           const progressPercent = (cardData.sessionProgress.current / cardData.sessionProgress.total) * 100;
           document.getElementById('session-progress').style.width = `${progressPercent}%`;
           
+          // Display card tags if available
+          const tagsContainer = document.getElementById('card-tags');
+          tagsContainer.innerHTML = '';
+
+          if (cardData.card.tags && cardData.card.tags.length > 0) {
+            cardData.card.tags.forEach(tag => {
+              const tagElement = document.createElement('span');
+              tagElement.className = 'card-tag';
+              tagElement.textContent = tag;
+              tagsContainer.appendChild(tagElement);
+            });
+          }
+
           // Clear the input
           document.getElementById('translation-input').value = '';
-          
+
           // Focus the input field for immediate typing
           setTimeout(() => {
             document.getElementById('translation-input').focus();
@@ -93,5 +110,12 @@ describe('Renderer - Practice Screen', () => {
     expect(window.flashcards.getCurrentCard).toHaveBeenCalledWith('test-session');
     expect(document.getElementById('card-content').textContent).toBe('Test content');
     expect(document.getElementById('translation-input').focus).toHaveBeenCalled();
+
+    // Check tags were displayed correctly
+    const tagsContainer = document.getElementById('card-tags');
+    const tagElements = tagsContainer.querySelectorAll('.card-tag');
+    expect(tagElements.length).toBe(2);
+    expect(tagElements[0].textContent).toBe('grammar');
+    expect(tagElements[1].textContent).toBe('beginner');
   });
 });
