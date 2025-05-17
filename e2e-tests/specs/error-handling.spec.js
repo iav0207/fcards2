@@ -30,38 +30,28 @@ test.describe('Error Handling', () => {
   });
 
   test('should show error notification when database stats fail to load', async () => {
-    // Use Promise resolution pattern with proper error handling
-    return Promise.resolve()
-      .then(async () => {
-        // Mock the getDatabaseStats method to throw an error
-        await window.evaluate(() => {
-          window.flashcards.getDatabaseStats = async () => {
-            throw new Error('Failed to connect to database');
-          };
-        });
+    // Mock the getDatabaseStats method to throw an error
+    await window.evaluate(() => {
+      window.flashcards.getDatabaseStats = async () => {
+        throw new Error('Failed to connect to database');
+      };
+    });
 
-        console.log('DEBUGGING: Clicking refresh stats button to trigger error');
-        await window.click('#refresh-stats');
-        await window.waitForTimeout(1500); // Longer wait for error processing
+    console.log('DEBUGGING: Clicking refresh stats button to trigger error');
+    await window.click('#refresh-stats');
+    await window.waitForTimeout(1500); // Longer wait for error processing
 
-        // Wait for notification to appear and return it
-        return window.$('.notification.error');
-      })
-      .then(errorNotification => {
-        // Verify error notification is displayed
-        expect(errorNotification).toBeTruthy('No error notification found');
+    // Wait for notification to appear
+    const errorNotification = await window.$('.notification.error');
 
-        // Check notification title
-        return window.$eval('.notification.error .notification-title', el => el.textContent.trim());
-      })
-      .then(notificationTitle => {
-        console.log('DEBUGGING: Error notification title:', notificationTitle);
-        expect(notificationTitle).toContain('Stats Loading Failed');
-      })
-      .catch(error => {
-        test.fail(`Database stats error notification test failed: ${error.message}`);
-        throw error;
-      });
+    // Verify error notification is displayed
+    expect(errorNotification).toBeTruthy('No error notification found');
+
+    // Check notification title
+    const notificationTitle = await window.$eval('.notification.error .notification-title', el => el.textContent.trim());
+    console.log('DEBUGGING: Error notification title:', notificationTitle);
+
+    expect(notificationTitle).toContain('Stats Loading Failed');
   });
 
   test('should show warning notification for same source and target languages', async () => {
@@ -87,48 +77,38 @@ test.describe('Error Handling', () => {
   });
 
   test('should show error notification when session creation fails', async () => {
-    // Use Promise resolution pattern with proper error handling
-    return Promise.resolve()
-      .then(async () => {
-        console.log('DEBUGGING: Navigating to practice setup');
-        // Navigate to practice setup
-        await homePage.navigateToPractice();
-        await window.waitForTimeout(1000);
+    console.log('DEBUGGING: Navigating to practice setup');
+    // Navigate to practice setup
+    await homePage.navigateToPractice();
+    await window.waitForTimeout(1000);
 
-        // Set up valid language selections
-        await setupScreen.selectLanguage('source', 'en');
-        await setupScreen.selectLanguage('target', 'es');
+    // Set up valid language selections
+    await setupScreen.selectLanguage('source', 'en');
+    await setupScreen.selectLanguage('target', 'es');
 
-        // Mock the createGameSession method to throw an error
-        await window.evaluate(() => {
-          window.flashcards.createGameSession = async () => {
-            throw new Error('Not enough cards available');
-          };
-        });
+    // Mock the createGameSession method to throw an error
+    await window.evaluate(() => {
+      window.flashcards.createGameSession = async () => {
+        throw new Error('Not enough cards available');
+      };
+    });
 
-        console.log('DEBUGGING: Clicking start button to trigger error');
-        // Try to start the session
-        await setupScreen.clickElement(setupScreen.selectors.startButton);
-        await window.waitForTimeout(1500); // Longer wait for error processing
+    console.log('DEBUGGING: Clicking start button to trigger error');
+    // Try to start the session
+    await setupScreen.clickElement(setupScreen.selectors.startButton);
+    await window.waitForTimeout(1500); // Longer wait for error processing
 
-        // Return error notification element
-        return window.$('.notification.error');
-      })
-      .then(errorNotification => {
-        // Verify error notification is displayed
-        expect(errorNotification).toBeTruthy('No error notification found');
+    // Get error notification element
+    const errorNotification = await window.$('.notification.error');
 
-        // Check notification title
-        return window.$eval('.notification.error .notification-title', el => el.textContent.trim());
-      })
-      .then(notificationTitle => {
-        console.log('DEBUGGING: Error notification title:', notificationTitle);
-        expect(notificationTitle).toContain('Session Creation Failed');
-      })
-      .catch(error => {
-        test.fail(`Session creation error notification test failed: ${error.message}`);
-        throw error;
-      });
+    // Verify error notification is displayed
+    expect(errorNotification).toBeTruthy('No error notification found');
+
+    // Check notification title
+    const notificationTitle = await window.$eval('.notification.error .notification-title', el => el.textContent.trim());
+    console.log('DEBUGGING: Error notification title:', notificationTitle);
+
+    expect(notificationTitle).toContain('Session Creation Failed');
   });
 
   test('should display empty warning when submitting empty translation', async () => {

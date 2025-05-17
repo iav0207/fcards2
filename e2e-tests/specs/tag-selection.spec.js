@@ -59,57 +59,39 @@ test.describe('Tag Selection - Standard Scenario', () => {
   test('should toggle tag selection when clicked', async () => {
     console.log('DEBUGGING: Starting tag toggle test');
 
-    // Use Promise resolution pattern with .then/.catch
-    return toggleTagSelection(window)
-      .then(result => {
-        console.log('DEBUGGING: Tag toggle result:', result);
+    // Use direct async/await pattern which propagates failures properly
+    const result = await toggleTagSelection(window);
+    console.log('DEBUGGING: Tag toggle result:', result);
 
-        // Verify the state changed (no conditionals)
-        expect(result.initialState).not.toEqual(result.finalState);
+    // Verify the state changed (no conditionals)
+    expect(result.initialState).not.toEqual(result.finalState);
 
-        // Since tags start selected in our test data, assert they become deselected
-        expect(result.initialState).toBeTruthy();
-        expect(result.finalState).toBeFalsy();
+    // Since tags start selected in our test data, assert they become deselected
+    expect(result.initialState).toBeTruthy();
+    expect(result.finalState).toBeFalsy();
 
-        // Summary should reflect the changed selection
-        expect(result.summaryText).not.toContain('All');
-        expect(result.summaryText).toContain('selected');
-      })
-      .catch(error => {
-        // Use test.fail to explicitly fail the test with a descriptive message
-        test.fail(`Tag selection toggle failed: ${error.message}`);
-
-        // Re-throw to ensure the test fails if we get here
-        throw error;
-      });
+    // Summary should reflect the changed selection
+    expect(result.summaryText).not.toContain('All');
+    expect(result.summaryText).toContain('selected');
   });
 
   test('should select/deselect all tags with buttons', async () => {
     console.log('DEBUGGING: Starting select/deselect all tags test');
 
-    // Use Promise resolution pattern with .then/.catch
-    return toggleSelectDeselectAllTags(window)
-      .then(result => {
-        console.log('DEBUGGING: Select/deselect result:', result);
+    // Use direct async/await pattern which propagates failures properly
+    const result = await toggleSelectDeselectAllTags(window);
+    console.log('DEBUGGING: Select/deselect result:', result);
 
-        // Verify we have tags to work with
-        expect(result.initialCount).toBeGreaterThan(0);
+    // Verify we have tags to work with
+    expect(result.initialCount).toBeGreaterThan(0);
 
-        // Verify that all tags were deselected
-        expect(result.allDeselected).toBeTruthy();
-        expect(result.afterDeselect).toEqual(result.initialCount);
+    // Verify that all tags were deselected
+    expect(result.allDeselected).toBeTruthy();
+    expect(result.afterDeselect).toEqual(result.initialCount);
 
-        // Verify that all tags were selected again
-        expect(result.allSelected).toBeTruthy();
-        expect(result.afterSelect).toEqual(result.initialCount);
-      })
-      .catch(error => {
-        // Use test.fail to explicitly fail the test with a descriptive message
-        test.fail(`Select/deselect all tags failed: ${error.message}`);
-
-        // Re-throw to ensure the test fails if we get here
-        throw error;
-      });
+    // Verify that all tags were selected again
+    expect(result.allSelected).toBeTruthy();
+    expect(result.afterSelect).toEqual(result.initialCount);
   });
 });
 
@@ -146,22 +128,13 @@ test.describe('Tag Selection - No Tags (Hidden Container)', () => {
   test('should hide tag selection container when no tags exist', async () => {
     console.log('DEBUGGING: Starting hidden container test');
 
-    // Use Promise resolution pattern with .then/.catch
-    return getTagContainerStatus(window)
-      .then(containerStatus => {
-        console.log('DEBUGGING: Container status:', containerStatus);
+    // Use direct async/await pattern which propagates failures properly
+    const containerStatus = await getTagContainerStatus(window);
+    console.log('DEBUGGING: Container status:', containerStatus);
 
-        // Container should exist but not be visible
-        expect(containerStatus.exists).toBeTruthy();
-        expect(containerStatus.visible).toBeFalsy();
-      })
-      .catch(error => {
-        // Use test.fail to explicitly fail the test with a descriptive message
-        test.fail(`Checking container status failed: ${error.message}`);
-
-        // Re-throw to ensure the test fails if we get here
-        throw error;
-      });
+    // Container should exist but not be visible
+    expect(containerStatus.exists).toBeTruthy();
+    expect(containerStatus.visible).toBeFalsy();
   });
 });
 
@@ -204,30 +177,18 @@ test.describe('Tag Selection - No Tags (Empty Container)', () => {
   test('should show "no tags available" message when container is visible but empty', async () => {
     console.log('DEBUGGING: Starting no tags message test');
 
-    // Use Promise resolution pattern with .then/.catch for both operations
-    return ensureVisibleEmptyContainer(window)
-      .then(() => getNoTagsMessageStatus(window))
-      .then(messageStatus => {
-        console.log('DEBUGGING: No tags message status:', messageStatus);
+    // Use direct async/await pattern which propagates failures properly
+    await ensureVisibleEmptyContainer(window);
+    const messageStatus = await getNoTagsMessageStatus(window);
+    console.log('DEBUGGING: No tags message status:', messageStatus);
 
-        // Message should exist and be visible
-        expect(messageStatus.exists).toBeTruthy();
-        expect(messageStatus.visible).toBeTruthy();
+    // Message should exist and be visible
+    expect(messageStatus.exists).toBeTruthy();
+    expect(messageStatus.visible).toBeTruthy();
 
-        // Return a promise for the tag button check
-        return window.$$('.tag-toggle');
-      })
-      .then(tagButtons => {
-        // No tag buttons should exist
-        expect(tagButtons.length).toEqual(0);
-      })
-      .catch(error => {
-        // Use test.fail to explicitly fail the test with a descriptive message
-        test.fail(`No tags message test failed: ${error.message}`);
-
-        // Re-throw to ensure the test fails if we get here
-        throw error;
-      });
+    // Check for tag buttons - there should be none
+    const tagButtons = await window.$$('.tag-toggle');
+    expect(tagButtons.length).toEqual(0);
   });
 });
 
@@ -263,38 +224,17 @@ test.describe('Tag Selection - Many Tags', () => {
   test('should display many distinct tags', async () => {
     console.log('DEBUGGING: Starting many distinct tags test');
 
-    // Use Promise resolution pattern with .then/.catch
-    return Promise.resolve()
-      .then(() => window.$$('.tag-toggle'))
-      .then(tagButtons => {
-        // Tag buttons should be present
-        expect(tagButtons.length).toBeGreaterThan(5);
+    // Use direct async/await pattern which propagates failures properly
+    const tagButtons = await window.$$('.tag-toggle');
 
-        // Get unique tag names
-        return window.evaluate(() => {
-          const tags = document.querySelectorAll('.tag-toggle');
-          const tagNames = new Set();
+    // Tag buttons should be present
+    expect(tagButtons.length).toBeGreaterThan(5);
 
-          tags.forEach(tag => {
-            const nameElement = tag.querySelector('span:not(.tag-count)');
-            if (nameElement) tagNames.add(nameElement.textContent.trim());
-          });
+    // Get unique tag names using the helper function
+    const uniqueTagCount = await getUniqueTagCount(window);
+    console.log('DEBUGGING: Unique tag count:', uniqueTagCount);
 
-          return tagNames.size;
-        });
-      })
-      .then(uniqueTagCount => {
-        console.log('DEBUGGING: Unique tag count:', uniqueTagCount);
-
-        // There should be at least 5 unique tags
-        expect(uniqueTagCount).toBeGreaterThanOrEqual(5);
-      })
-      .catch(error => {
-        // Use test.fail to explicitly fail the test with a descriptive message
-        test.fail(`Many distinct tags test failed: ${error.message}`);
-
-        // Re-throw to ensure the test fails if we get here
-        throw error;
-      });
+    // There should be at least 5 unique tags
+    expect(uniqueTagCount).toBeGreaterThanOrEqual(5);
   });
 });

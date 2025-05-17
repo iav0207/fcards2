@@ -81,54 +81,39 @@ test.describe('Import/Export Functionality', () => {
   });
 
   test('should show operation result screen after export', async () => {
-    // Use Promise resolution pattern with proper error handling
-    return Promise.resolve()
-      .then(async () => {
-        console.log('DEBUGGING: Mocking export database function');
-        // Mock successful export
-        await window.evaluate(() => {
-          // Mock the export function to return a successful result
-          window.flashcards.exportDatabase = async () => ({
-            success: true,
-            path: '/fake/path/export.json',
-            stats: {
-              flashcardsCount: 5,
-              sessionsCount: 2
-            }
-          });
-        });
-
-        console.log('DEBUGGING: Clicking export button');
-        // Click the export button directly
-        await window.click('#export-data-btn');
-        await window.waitForTimeout(1500); // Longer wait for operation to complete
-
-        // Return the operation result screen element
-        return window.$('#operation-result-screen.active');
-      })
-      .then(operationResultScreen => {
-        // Verify operation result screen is shown
-        expect(operationResultScreen).toBeTruthy('Operation result screen not shown');
-
-        // Check if success message is displayed
-        return window.$eval('#operation-result-title', el => el.textContent);
-      })
-      .then(resultTitle => {
-        console.log('DEBUGGING: Result title:', resultTitle);
-        expect(resultTitle).toContain('Export Successful');
-
-        // Check if the path is displayed
-        return window.$('#operation-result-path-container');
-      })
-      .then(pathContainer => {
-        return pathContainer.isVisible();
-      })
-      .then(isPathVisible => {
-        expect(isPathVisible).toBeTruthy('Path container is not visible');
-      })
-      .catch(error => {
-        test.fail(`Export operation result test failed: ${error.message}`);
-        throw error;
+    console.log('DEBUGGING: Mocking export database function');
+    // Mock successful export
+    await window.evaluate(() => {
+      // Mock the export function to return a successful result
+      window.flashcards.exportDatabase = async () => ({
+        success: true,
+        path: '/fake/path/export.json',
+        stats: {
+          flashcardsCount: 5,
+          sessionsCount: 2
+        }
       });
+    });
+
+    console.log('DEBUGGING: Clicking export button');
+    // Click the export button directly
+    await window.click('#export-data-btn');
+    await window.waitForTimeout(1500); // Longer wait for operation to complete
+
+    // Get the operation result screen element
+    const operationResultScreen = await window.$('#operation-result-screen.active');
+
+    // Verify operation result screen is shown
+    expect(operationResultScreen).toBeTruthy('Operation result screen not shown');
+
+    // Check if success message is displayed
+    const resultTitle = await window.$eval('#operation-result-title', el => el.textContent);
+    console.log('DEBUGGING: Result title:', resultTitle);
+    expect(resultTitle).toContain('Export Successful');
+
+    // Check if the path is displayed
+    const pathContainer = await window.$('#operation-result-path-container');
+    const isPathVisible = await pathContainer.isVisible();
+    expect(isPathVisible).toBeTruthy('Path container is not visible');
   });
 });
