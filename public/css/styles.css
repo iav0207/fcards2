@@ -31,6 +31,7 @@ p {
   align-items: center;
   width: 100%;
   max-width: 800px;
+  margin-bottom: 40px; /* Add margin to prevent content from being hidden by footer */
 }
 
 .info-container {
@@ -497,4 +498,63 @@ textarea {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+/* App footer */
+.app-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 6px;
+  background-color: #121212;
+  border-top: 1px solid #333;
+  text-align: center;
+  font-size: 10px;
+  color: #777;
+  opacity: 0.8;
+  z-index: 10;
+}
+
+.app-footer-content {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.app-footer-item {
+  display: flex;
+}
+
+.app-footer-label {
+  margin-right: 5px;
+}
+
+.app-footer-value {
+  color: #aaa;
+}
+
+/* Icon button styles */
+.icon-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  padding: 5px;
+  border-radius: 50%;
+  color: #90caf9;
+}
+
+.icon-button:hover {
+  background-color: rgba(144, 202, 249, 0.1);
+  transform: rotate(30deg);
+}
+
+.refresh-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 18px;
+  font-weight: bold;
 }

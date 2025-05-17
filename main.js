@@ -103,8 +103,8 @@ function createWindow() {
   const isHeadless = ['1', 'true'].includes(String(process.env.ELECTRON_HEADLESS).toLowerCase());
 
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1024,
+    height: 768,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

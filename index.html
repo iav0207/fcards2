@@ -11,12 +11,18 @@
 
   <div class="container">
     <h1>FlashCards Desktop</h1>
-    <p>A language learning application to create and practice flashcards</p>
-    
+
     <!-- Home Screen -->
     <div id="home-screen" class="screen active">
-      <div class="info-container">
-        <h2>Database Information</h2>
+      <div class="button-container">
+        <button id="start-practice-btn" class="primary-button" style="font-size: 16px; padding: 12px 24px;">Start Practice Session</button>
+        <button id="create-sample-card">Create Sample Card</button>
+      </div>
+
+      <!-- Database (Merged Container) -->
+      <div class="info-container" style="margin-top: 40px; position: relative;">
+        <h2>Database</h2>
+        <button id="refresh-stats" class="icon-button refresh-button" aria-label="Refresh Stats" title="Refresh Stats">↻</button>
         <div id="db-stats">
           <div class="info-item">
             <span class="info-label">FlashCards:</span>
@@ -35,42 +41,12 @@
             <span class="info-value" id="completed-sessions-count">Loading...</span>
           </div>
         </div>
-      </div>
-
-      <div class="button-container">
-        <button id="start-practice-btn" class="primary-button" style="font-size: 16px; padding: 12px 24px;">Start Practice Session</button>
-        <button id="refresh-stats">Refresh Stats</button>
-        <button id="create-sample-card">Create Sample Card</button>
-      </div>
-
-      <!-- Database Management -->
-      <div class="info-container" style="margin-top: 40px;">
-        <h2>Database Management</h2>
-        <p>Import or export your flashcards, sessions, and settings.</p>
         <div class="button-container">
-          <button id="export-data-btn">Export Data</button>
+          <button id="export-data-btn">Export All Data</button>
           <button id="import-data-btn">Import Data</button>
         </div>
       </div>
 
-      <!-- App Information (moved to bottom) -->
-      <div class="info-container" style="margin-top: 40px; opacity: 0.8;">
-        <h2>App Information</h2>
-        <div id="version-info">
-          <div class="info-item">
-            <span class="info-label">Node.js Version:</span>
-            <span class="info-value" id="node-version">Loading...</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Chromium Version:</span>
-            <span class="info-value" id="chrome-version">Loading...</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Electron Version:</span>
-            <span class="info-value" id="electron-version">Loading...</span>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Session Setup Screen -->
@@ -272,6 +248,23 @@
     </div>
   </div>
 
+  <!-- App footer -->
+  <footer class="app-footer">
+    <div class="app-footer-content">
+      <div class="app-footer-item">
+        <span class="app-footer-label">Node.js:</span>
+        <span class="app-footer-value" id="node-version">Loading...</span>
+      </div>
+      <div class="app-footer-item">
+        <span class="app-footer-label">Chromium:</span>
+        <span class="app-footer-value" id="chrome-version">Loading...</span>
+      </div>
+      <div class="app-footer-item">
+        <span class="app-footer-label">Electron:</span>
+        <span class="app-footer-value" id="electron-version">Loading...</span>
+      </div>
+    </div>
+  </footer>
 
   <!-- Display initial version information -->
   <script>
