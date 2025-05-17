@@ -72,11 +72,13 @@ test.describe('Complete Practice Session Flow', () => {
     // Submit a translation
     await practiceScreen.fillField(practiceScreen.selectors.translationInput, 'Hola');
     await practiceScreen.clickElement(practiceScreen.selectors.submitButton);
-    await window.waitForTimeout(2000);
-    
-    // Verify we're in the feedback screen
-    const isFeedbackLoaded = await practiceScreen.isFeedbackLoaded();
-    expect(isFeedbackLoaded).toBeTruthy();
+
+    // Use Playwright's retry mechanism to wait for the feedback screen
+    // This will retry the assertion until it passes or the timeout is reached
+    await expect(async () => {
+      const isFeedbackLoaded = await practiceScreen.isFeedbackLoaded();
+      expect(isFeedbackLoaded).toBeTruthy();
+    }).toPass({ timeout: 8000 });
 
     // Go to next (should go to results since only 1 card)
     await practiceScreen.clickElement(practiceScreen.selectors.nextButton);
