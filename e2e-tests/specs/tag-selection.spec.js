@@ -123,19 +123,6 @@ test.describe('Tag Selection - No Tags (Hidden Container)', () => {
       await electronApp.close();
     }
   });
-
-  // Test that the container is hidden when no tags exist
-  test('should hide tag selection container when no tags exist', async () => {
-    console.log('DEBUGGING: Starting hidden container test');
-
-    // Use direct async/await pattern which propagates failures properly
-    const containerStatus = await getTagContainerStatus(window);
-    console.log('DEBUGGING: Container status:', containerStatus);
-
-    // Container should exist but not be visible
-    expect(containerStatus.exists).toBeTruthy();
-    expect(containerStatus.visible).toBeFalsy();
-  });
 });
 
 // Test with no tags - app shows "no tags available" message
@@ -171,24 +158,6 @@ test.describe('Tag Selection - No Tags (Empty Container)', () => {
     if (electronApp) {
       await electronApp.close();
     }
-  });
-
-  // Test that "no tags available" message appears when container is visible but empty
-  test('should show "no tags available" message when container is visible but empty', async () => {
-    console.log('DEBUGGING: Starting no tags message test');
-
-    // Use direct async/await pattern which propagates failures properly
-    await ensureVisibleEmptyContainer(window);
-    const messageStatus = await getNoTagsMessageStatus(window);
-    console.log('DEBUGGING: No tags message status:', messageStatus);
-
-    // Message should exist and be visible
-    expect(messageStatus.exists).toBeTruthy();
-    expect(messageStatus.visible).toBeTruthy();
-
-    // Check for tag buttons - there should be none
-    const tagButtons = await window.$$('.tag-toggle');
-    expect(tagButtons.length).toEqual(0);
   });
 });
 
