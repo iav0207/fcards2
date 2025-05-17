@@ -16,6 +16,8 @@ class HomePage extends BasePage {
       practiceButton: '#start-practice-btn',
       importButton: '#import-data-btn',
       exportButton: '#export-data-btn',
+      refreshStatsButton: '#refresh-stats',
+      createSampleButton: '#create-sample-card',
       flashcardStats: '#flashcards-count',
       sessionsStats: '#sessions-count',
       activeSessionsStats: '#active-sessions-count',
