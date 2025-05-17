@@ -8,9 +8,9 @@ test.describe('Application Startup', () => {
   let homePage;
 
   test.beforeEach(async () => {
-    // Launch the Electron app
-    ({ electronApp, window } = await launchApp());
-    
+    // Launch the Electron app (use headless mode)
+    ({ electronApp, window } = await launchApp(true));
+
     // Initialize the home page object
     homePage = new HomePage(window);
   });

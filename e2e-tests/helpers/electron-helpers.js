@@ -3,20 +3,27 @@ const path = require('path');
 
 /**
  * Launch the Electron application for testing
+ * Headless mode is controlled via the ELECTRON_HEADLESS environment variable
  * @returns {Promise<{electronApp, window}>} - The Electron app and its first window
  */
 async function launchApp() {
   // Find the main.js file in the project root
   const mainJsPath = path.join(process.cwd(), 'main.js');
   
-  // Launch Electron app
-  const electronApp = await electron.launch({
+  // The ELECTRON_HEADLESS environment variable is set in the npm scripts
+  
+  // Options for Electron launch
+  const options = {
     args: [mainJsPath],
     env: {
       ...process.env,
       NODE_ENV: 'test'
+      // ELECTRON_HEADLESS is already in the environment from cross-env
     }
-  });
+  };
+  
+  // Launch Electron app
+  const electronApp = await electron.launch(options);
   
   // Get the first window
   const window = await electronApp.firstWindow();

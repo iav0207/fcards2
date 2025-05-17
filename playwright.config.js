@@ -17,6 +17,7 @@ module.exports = defineConfig({
     trace: 'on-first-retry',
     video: 'on-first-retry',
     screenshot: 'only-on-failure',
+    headless: true, // Run in headless mode by default
   },
   projects: [
     {
