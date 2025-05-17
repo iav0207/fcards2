@@ -33,8 +33,17 @@ npm run build
 # Package the app
 npm run package
 
-# Run tests
+# Run all tests (unit and E2E)
 npm test
+
+# Run only unit tests
+npm run test:unit
+
+# Run only E2E tests
+npm run test:e2e
+
+# Run E2E tests with visible UI
+npm run test:e2e:headed
 ```
 
 ## Development Approach
@@ -53,7 +62,7 @@ For detailed development guidelines, see [DEVELOPMENT.md](docs/DEVELOPMENT.md).
 - **Backend**: Electron with SQLite
 - **Language**: JavaScript/TypeScript
 - **Translation API**: Gemini API (fallback to OpenAI)
-- **Testing**: Jest
+- **Testing**: Jest (unit/integration) & Playwright (E2E)
 
 ## Project Structure
 
@@ -65,7 +74,11 @@ For detailed development guidelines, see [DEVELOPMENT.md](docs/DEVELOPMENT.md).
 - `/public`: Static assets
 - `/docs`: Documentation
   - `/rfc`: Feature specifications and RFCs
-- `/__tests__`: Test files
+- `/__tests__`: Unit and integration tests
+- `/e2e-tests`: End-to-end tests
+  - `/helpers`: Test helper utilities
+  - `/page-objects`: Page object models
+  - `/specs`: Test specifications
 
 ## Documentation
 

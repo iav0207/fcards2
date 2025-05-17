@@ -111,7 +111,20 @@ npm run dev
 1. Make sure you've set up the environment variables.
 2. Run the tests to ensure everything is working:
    ```bash
+   # Run all tests (unit and E2E)
    npm test
+
+   # Run only unit tests
+   npm run test:unit
+
+   # Run only E2E tests in headless mode
+   npm run test:e2e
+
+   # Run E2E tests with visible UI
+   npm run test:e2e:headed
+
+   # Run E2E tests with Playwright UI mode
+   npm run test:e2e:ui
    ```
 3. Start the development server:
    ```bash

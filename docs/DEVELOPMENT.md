@@ -76,7 +76,16 @@ All significant features should start with a Request for Comments (RFC) document
 
 #### E2E Tests
 
-- Test critical user journeys
+- Test critical user journeys through the entire application
+- Use Playwright for automated end-to-end testing
+- Implement tests following the Page Object Model pattern
+- Test in both headless (CI) and headed (development) modes
+- Verify core functionality like:
+  - Application startup and initialization
+  - Navigation between screens
+  - Flashcard management
+  - Practice session flows
+  - Settings and configuration
 
 ### 5. Documentation
 
