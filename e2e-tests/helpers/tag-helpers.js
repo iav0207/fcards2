@@ -104,75 +104,6 @@ async function toggleSelectDeselectAllTags(page) {
   });
 }
 
-/**
- * Get tag container visibility status
- * @param {import('playwright').Page} page - Playwright page object
- * @returns {Promise<{exists: boolean, visible: boolean}>} - Container status
- */
-async function getTagContainerStatus(page) {
-  return page.evaluate(() => {
-    const container = document.getElementById('tag-selection-container');
-    if (!container) return { exists: false, visible: false };
-
-    const isVisible = window.getComputedStyle(container).display !== 'none';
-    return { exists: true, visible: isVisible };
-  });
-}
-
-/**
- * Check for no-tags message and its visibility
- * @param {import('playwright').Page} page - Playwright page object
- * @returns {Promise<{exists: boolean, visible: boolean}>} - Message status
- */
-async function getNoTagsMessageStatus(page) {
-  return page.evaluate(() => {
-    const container = document.getElementById('tag-selection-container');
-    if (!container) return { exists: false, visible: false };
-
-    const message = container.querySelector('.no-tags-message');
-    if (!message) return { exists: false, visible: false };
-
-    const isVisible = window.getComputedStyle(message).display !== 'none' &&
-                      window.getComputedStyle(container).display !== 'none';
-
-    return { exists: true, visible: isVisible };
-  });
-}
-
-/**
- * Make the container visible and ensure a no-tags message exists
- * @param {import('playwright').Page} page - Playwright page object
- * @returns {Promise<void>}
- * @throws {Error} If container doesn't exist
- */
-async function ensureVisibleEmptyContainer(page) {
-  await page.evaluate(() => {
-    return new Promise((resolve, reject) => {
-      const container = document.getElementById('tag-selection-container');
-      if (!container) {
-        reject(new Error('Tag selection container not found'));
-        return;
-      }
-
-      // Make container visible
-      container.style.display = 'block';
-
-      // Create or ensure no-tags message
-      let message = container.querySelector('.no-tags-message');
-      if (!message) {
-        message = document.createElement('div');
-        message.className = 'no-tags-message';
-        message.textContent = 'No tags available';
-        message.setAttribute('role', 'status');
-        container.appendChild(message);
-      }
-
-      message.style.display = 'block';
-
-      setTimeout(resolve, 100); // Short delay for DOM updates
-    });
-  });
-}
 
 /**
  * Get count of unique tags
@@ -196,8 +127,5 @@ async function getUniqueTagCount(page) {
 module.exports = {
   toggleTagSelection,
   toggleSelectDeselectAllTags,
-  getTagContainerStatus,
-  getNoTagsMessageStatus,
-  ensureVisibleEmptyContainer,
   getUniqueTagCount
 };

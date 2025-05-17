@@ -2,8 +2,7 @@ const { test, expect } = require('@playwright/test');
 const { launchApp } = require('../helpers/electron-helpers');
 const { setupPracticeEnvironment } = require('../helpers/test-data-helpers');
 const { toggleTagSelection, toggleSelectDeselectAllTags,
-        getTagContainerStatus, getNoTagsMessageStatus,
-        ensureVisibleEmptyContainer, getUniqueTagCount } = require('../helpers/tag-helpers');
+        getUniqueTagCount } = require('../helpers/tag-helpers');
 const HomePage = require('../page-objects/HomePage');
 const SetupScreen = require('../page-objects/SetupScreen');
 
