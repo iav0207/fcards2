@@ -7,8 +7,10 @@ module.exports = defineConfig({
     timeout: 5000
   },
   fullyParallel: false,
-  reporter: [
+  reporter: process.env.HTML_REPORT ? [
     ['html'],
+    ['list']
+  ] : [
     ['list']
   ],
   retries: process.env.CI ? 2 : 0,

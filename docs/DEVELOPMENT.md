@@ -86,6 +86,11 @@ All significant features should start with a Request for Comments (RFC) document
   - Flashcard management
   - Practice session flows
   - Settings and configuration
+  - Notifications and error handling
+  - Tag-based filtering of flashcards
+  - Session cancellation
+  - Import/Export operations
+  - Error conditions and edge cases
 
 ### 5. Documentation
 

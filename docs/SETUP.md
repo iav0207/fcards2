@@ -125,6 +125,17 @@ npm run dev
 
    # Run E2E tests with Playwright UI mode
    npm run test:e2e:ui
+
+   # Run specific E2E test files or patterns
+   npm run test:e2e -- -g "notifications"  # Run tests with "notifications" in the name
+   npm run test:e2e -- e2e-tests/specs/tag-selection.spec.js  # Run a specific test file
+
+   # Run E2E tests with specific workers/parallelism
+   npm run test:e2e -- --workers=2  # Run with 2 parallel workers
+
+   # Run E2E tests with HTML reporting
+   npm run test:e2e:report  # Headless with HTML report (served at http://localhost:9323)
+   npm run test:e2e:report:headed  # Headed with HTML report
    ```
 3. Start the development server:
    ```bash
