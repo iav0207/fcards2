@@ -100,7 +100,7 @@ function registerIpcHandlers() {
  */
 function createWindow() {
   // Check if headless mode is enabled for testing
-  const isHeadless = process.env.ELECTRON_HEADLESS === '1';
+  const isHeadless = ['1', 'true'].includes(String(process.env.ELECTRON_HEADLESS).toLowerCase());
 
   mainWindow = new BrowserWindow({
     width: 800,
