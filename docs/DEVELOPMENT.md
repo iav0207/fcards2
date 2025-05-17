@@ -76,7 +76,26 @@ All significant features should start with a Request for Comments (RFC) document
 
 #### E2E Tests
 
-- Test critical user journeys
+- Test critical user journeys through the entire application
+- Use Playwright for automated end-to-end testing
+- Implement tests following the Page Object Model pattern
+- Test in both headless (CI) and headed (development) modes
+- Use async/await pattern consistently for better error propagation:
+  - Avoid Promise-chain patterns with .then()/.catch() which can mask failures
+  - Always use direct async/await pattern to ensure assertion failures properly fail tests
+  - Don't catch errors unless you're explicitly testing for them
+  - Don't use test.fail() inside .catch() blocks - let assertions propagate naturally
+- Verify core functionality like:
+  - Application startup and initialization
+  - Navigation between screens
+  - Flashcard management
+  - Practice session flows
+  - Settings and configuration
+  - Notifications and error handling
+  - Tag-based filtering of flashcards
+  - Session cancellation
+  - Import/Export operations
+  - Error conditions and edge cases
 
 ### 5. Documentation
 

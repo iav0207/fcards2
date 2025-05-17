@@ -99,6 +99,9 @@ function registerIpcHandlers() {
  * Create the application window
  */
 function createWindow() {
+  // Check if headless mode is enabled for testing
+  const isHeadless = ['1', 'true'].includes(String(process.env.ELECTRON_HEADLESS).toLowerCase());
+
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
@@ -106,7 +109,9 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'src', 'preload', 'preload.js')
-    }
+    },
+    // For headless testing, hide the window
+    show: !isHeadless
   });
 
   // Load the HTML file
