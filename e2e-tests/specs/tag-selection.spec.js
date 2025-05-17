@@ -57,11 +57,8 @@ test.describe('Tag Selection - Standard Scenario', () => {
   });
 
   test('should toggle tag selection when clicked', async () => {
-    console.log('DEBUGGING: Starting tag toggle test');
-
     // Use direct async/await pattern which propagates failures properly
     const result = await toggleTagSelection(window);
-    console.log('DEBUGGING: Tag toggle result:', result);
 
     // Verify the state changed (no conditionals)
     expect(result.initialState).not.toEqual(result.finalState);
@@ -76,11 +73,8 @@ test.describe('Tag Selection - Standard Scenario', () => {
   });
 
   test('should select/deselect all tags with buttons', async () => {
-    console.log('DEBUGGING: Starting select/deselect all tags test');
-
     // Use direct async/await pattern which propagates failures properly
     const result = await toggleSelectDeselectAllTags(window);
-    console.log('DEBUGGING: Select/deselect result:', result);
 
     // Verify we have tags to work with
     expect(result.initialCount).toBeGreaterThan(0);
@@ -191,8 +185,6 @@ test.describe('Tag Selection - Many Tags', () => {
   });
 
   test('should display many distinct tags', async () => {
-    console.log('DEBUGGING: Starting many distinct tags test');
-
     // Use direct async/await pattern which propagates failures properly
     const tagButtons = await window.$$('.tag-toggle');
 
@@ -201,7 +193,6 @@ test.describe('Tag Selection - Many Tags', () => {
 
     // Get unique tag names using the helper function
     const uniqueTagCount = await getUniqueTagCount(window);
-    console.log('DEBUGGING: Unique tag count:', uniqueTagCount);
 
     // There should be at least 5 unique tags
     expect(uniqueTagCount).toBeGreaterThanOrEqual(5);

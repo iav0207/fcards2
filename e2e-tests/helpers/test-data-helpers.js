@@ -3,23 +3,6 @@
  */
 
 /**
- * Reset the database to a clean state
- * @param {import('playwright').Page} window - Playwright page object
- * @returns {Promise<void>}
- */
-async function resetDatabase(window) {
-  await window.evaluate(() => {
-    // Check if resetDatabase method exists
-    if (window.flashcards.resetDatabase) {
-      return window.flashcards.resetDatabase();
-    } else {
-      console.log('No resetDatabase method available, continuing with test');
-      return Promise.resolve();
-    }
-  });
-}
-
-/**
  * Create sample flashcards with specific tag configurations for testing
  * @param {import('playwright').Page} window - Playwright page object
  * @param {Object} options - Options for creating sample cards
@@ -149,9 +132,6 @@ async function createSampleFlashcards(window, options = {}) {
  * @returns {Promise<void>}
  */
 async function setupPracticeEnvironment(window, homePage, setupScreen, options = {}) {
-  // First reset the database
-  await resetDatabase(window);
-
   // Create sample flashcards with the specified tag scenario
   await createSampleFlashcards(window, {
     tagScenario: options.tagScenario || 'standard',
@@ -177,7 +157,6 @@ async function setupPracticeEnvironment(window, homePage, setupScreen, options =
 }
 
 module.exports = {
-  resetDatabase,
   createSampleFlashcards,
   setupPracticeEnvironment
 };
