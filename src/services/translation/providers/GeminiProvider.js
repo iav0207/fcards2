@@ -84,27 +84,23 @@ User's translation: "${data.userTranslation}"`;
     }
 
     prompt += `\n
-Evaluate the user's translation with EXTREMELY strict criteria:
-1. Accuracy - It MUST convey the EXACT same meaning with NO exceptions - ANY changes in meaning MUST be considered incorrect
-2. Grammar - It MUST be grammatically correct
-3. Vocabulary - The precise vocabulary MUST be used, with ALL key terms correctly translated
+Evaluate the user's translation with these criteria:
+1. Accuracy - It should convey the same meaning - significant changes in meaning should be considered incorrect
+2. Grammar - It should be grammatically correct
+3. Vocabulary - Appropriate vocabulary should be used, with key terms correctly translated
 4. Style - The style should match the context
 5. Spelling - Up to 2 typos or spelling mistakes may be acceptable, but more than that must be considered incorrect
 
-CRITICAL EVALUATION RULES:
-- Accuracy is your ABSOLUTE top priority - verbs/actions MUST match exactly
-- ANY change in the fundamental action or object is a critical error (e.g., "to delete an email" vs "to forward an email" are COMPLETELY different actions)
-- Core verbs MUST match - "arrange" vs "cancel", "send" vs "receive", "open" vs "close", "forward" vs "delete" - these are FUNDAMENTALLY different meanings
-- Translations must be REJECTED if they change the action, object, direction, or core meaning
-- NO LENIENCY for meaning changes - even if one word is changed that alters the meaning, mark as incorrect
-- Score anything with a different meaning as 0.0 and "correct: false" regardless of how similar the words appear
-- FIRST look for meaning changes before evaluating grammar or style
-- Use a "guilty until proven innocent" approach - if you can find ANY significant meaning difference, it is wrong
-- Different verbs with different meanings (e.g., "delete" vs "forward", "arrange" vs "drop") MUST be considered incorrect
+EVALUATION RULES:
+- Accuracy is your top priority
+- Core meaning must be preserved, though synonyms and alternative phrasings are acceptable
+- Translations should be rejected if they significantly change the action, object, direction, or core meaning
+- Focus first on whether the core meaning is preserved before evaluating grammar or style
+- Allow for different ways of expressing the same idea as long as the meaning is equivalent
 
 Respond with JSON only, using this exact format:
 {
-  "correct": boolean,  (Whether the translation is overall correct, be strict)
+  "correct": boolean,  (Whether the translation is overall correct)
   "score": number,  (A score from 0.0 to 1.0 indicating quality)
   "feedback": string,  (A short, helpful feedback message for the user)
   "suggestedTranslation": string,  (A correct translation if the user's is wrong)
