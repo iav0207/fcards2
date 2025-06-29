@@ -146,16 +146,23 @@
         <div class="progress-value" id="session-progress"></div>
       </div>
       <div class="card">
-        <div class="card-content" id="card-content"></div>
-        <div class="card-tags" id="card-tags"></div>
+        <div class="card-flipper">
+          <div class="card-front">
+            <div id="card-tags" class="card-tags"></div>
+            <div id="card-content" data-testid="card-content" class="card-content"></div>
+            <div id="retry-badge" class="retry-badge" style="display: none;">Retry</div>
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label for="translation-input">Your Translation:</label>
-        <textarea id="translation-input" placeholder="Type your translation here..."></textarea>
-      </div>
-      <div class="button-container">
-        <button id="submit-answer-btn" class="primary-button">Submit Answer</button>
-        <button id="cancel-session-btn" class="secondary-button">Cancel Session</button>
+      <div class="practice-input-area">
+        <div class="form-group">
+          <label for="translation-input">Your Translation:</label>
+          <textarea id="translation-input" placeholder="Type your translation here..."></textarea>
+        </div>
+        <div class="button-container">
+          <button id="submit-answer-btn" class="primary-button">Submit Answer</button>
+          <button id="cancel-session-btn" class="secondary-button">Cancel Session</button>
+        </div>
       </div>
     </div>
 

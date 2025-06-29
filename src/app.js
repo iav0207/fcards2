@@ -229,14 +229,7 @@ class FlashCardsApp {
       this.state.currentCard = cardData;
       
       // Update UI
-      document.getElementById('card-content').textContent = cardData.card.content;
-      
-      // Update progress
-      const progressPercent = (cardData.sessionProgress.current / cardData.sessionProgress.total) * 100;
-      document.getElementById('session-progress').style.width = `${progressPercent}%`;
-      
-      // Clear the input
-      document.getElementById('translation-input').value = '';
+      this.updatePracticeScreen(cardData);
     } catch (error) {
       console.error('Error loading current card:', error);
       this.notificationSystem.error(
@@ -333,20 +326,24 @@ class FlashCardsApp {
    */
   async nextCard() {
     try {
-      const result = await window.flashcards.advanceSession(this.state.sessionId);
-      
-      if (result.isComplete) {
-        // Session is complete, show results
-        this.showResults();
+      // Advance the session on the backend and get the result
+      const advanceResult = await window.flashcards.advanceSession(this.state.sessionId);
+
+      if (advanceResult.isComplete) {
+        // If the session is complete, show the results
+        await this.showResults();
       } else {
-        // Load the next card
-        await this.loadCurrentCard();
+        // Otherwise, update the state and UI with the next card
+        this.state.currentCard = advanceResult.nextCard;
+        this.updatePracticeScreen(advanceResult.nextCard);
+        
+        // Show the practice screen for the next card
         this.showScreen('practice');
       }
     } catch (error) {
-      console.error('Error advancing session:', error);
+      console.error('Error advancing to next card:', error);
       this.notificationSystem.error(
-        'Session Advance Failed',
+        'Advancement Failed',
         'Could not advance to the next card',
         error.message
       );
@@ -532,6 +529,34 @@ class FlashCardsApp {
     document.getElementById('operation-result-path-container').style.display = 'none';
     
     this.showScreen('operationResult');
+  }
+
+  /**
+   * Update the practice screen UI with new card data
+   * @param {Object} cardData - The card data to display
+   */
+  updatePracticeScreen(cardData) {
+    if (!cardData) return;
+
+    // Update card content
+    document.getElementById('card-content').textContent = cardData.card.content;
+
+    // Update progress bar
+    const progressPercent = (cardData.sessionProgress.current / cardData.sessionProgress.total) * 100;
+    document.getElementById('session-progress').style.width = `${progressPercent}%`;
+
+    // Update retry badge
+    const retryBadge = document.getElementById('retry-badge'); // Assuming an element with this ID exists
+    if (retryBadge) {
+      retryBadge.style.display = cardData.sessionProgress.isRetry ? 'block' : 'none';
+    }
+
+    // Clear the input and focus
+    const translationInput = document.getElementById('translation-input');
+    translationInput.value = '';
+    
+    // Defer focus slightly to ensure the screen is visible
+    setTimeout(() => translationInput.focus(), 100);
   }
 }
 
