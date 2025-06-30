@@ -6,7 +6,6 @@ module.exports = defineConfig({
   expect: {
     timeout: 5000
   },
-  fullyParallel: false,
   reporter: process.env.HTML_REPORT ? [
     ['html'],
     ['list']
@@ -14,7 +13,7 @@ module.exports = defineConfig({
     ['list']
   ],
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1, // Enforce sequential execution to prevent DB concurrency issues in E2E tests.
   use: {
     trace: 'on-first-retry',
     video: 'on-first-retry',
